@@ -14,6 +14,7 @@ namespace CurajConnect
     {
         const string REG_NAME = "CURAJ_WiFi_AutoLogin";
         const string PORTAL_IP = "122.252.242.93";
+        const string NAS_IP = "1.254.254.254";
         const string CHECK_URL = "http://connectivitycheck.gstatic.com/generate_204";
 
         public static string GetConfigDir()
@@ -86,14 +87,19 @@ namespace CurajConnect
             try
             {
                 HttpWebRequest req = (HttpWebRequest)WebRequest.Create(CHECK_URL);
-                req.Timeout = 3000;
+                req.Timeout = 3500;
                 req.Method = "GET";
+                req.AllowAutoRedirect = false; // CRITICAL: Stop following captive portal 302 redirects
                 using (HttpWebResponse res = (HttpWebResponse)req.GetResponse())
                 {
-                    return (int)res.StatusCode == 204;
+                    // 204 No Content with no redirect verifies active Internet routing
+                    return res.StatusCode == HttpStatusCode.NoContent;
                 }
             }
-            catch { return false; }
+            catch
+            {
+                return false;
+            }
         }
 
         public static bool IsPortalReachable()
@@ -108,13 +114,57 @@ namespace CurajConnect
                     return res.StatusCode == HttpStatusCode.OK;
                 }
             }
-            catch { return false; }
+            catch
+            {
+                try
+                {
+                    HttpWebRequest reqNas = (HttpWebRequest)WebRequest.Create("http://" + NAS_IP + "/");
+                    reqNas.Timeout = 3000;
+                    reqNas.Method = "GET";
+                    using (HttpWebResponse resNas = (HttpWebResponse)reqNas.GetResponse())
+                    {
+                        return resNas.StatusCode == HttpStatusCode.OK;
+                    }
+                }
+                catch { return false; }
+            }
         }
 
         public static string PerformLogin(string user, string pass)
         {
             try
             {
+                CookieContainer cookies = new CookieContainer();
+
+                // Step 1: Prime session challenge with Inventum NAS controller
+                try
+                {
+                    HttpWebRequest initReq = (HttpWebRequest)WebRequest.Create("http://" + NAS_IP + "/");
+                    initReq.Timeout = 4000;
+                    initReq.Method = "GET";
+                    initReq.CookieContainer = cookies;
+                    using (HttpWebResponse initRes = (HttpWebResponse)initReq.GetResponse())
+                    using (StreamReader sr = new StreamReader(initRes.GetResponseStream()))
+                    {
+                        string html = sr.ReadToEnd();
+                        int idx = html.IndexOf("URL=http://");
+                        if (idx != -1)
+                        {
+                            int endIdx = html.IndexOf('"', idx + 4);
+                            if (endIdx != -1)
+                            {
+                                string portalUrl = html.Substring(idx + 4, endIdx - idx - 4);
+                                HttpWebRequest portalReq = (HttpWebRequest)WebRequest.Create(portalUrl);
+                                portalReq.Timeout = 4000;
+                                portalReq.CookieContainer = cookies;
+                                using (HttpWebResponse portalRes = (HttpWebResponse)portalReq.GetResponse()) { }
+                            }
+                        }
+                    }
+                }
+                catch { }
+
+                // Step 2: Post credentials to userportal endpoint
                 string postData = "username=" + Uri.EscapeDataString(user) +
                                   "&password=" + Uri.EscapeDataString(pass) +
                                   "&phone=0&type=2&jsonresponse=1";
@@ -125,6 +175,7 @@ namespace CurajConnect
                 req.ContentType = "application/x-www-form-urlencoded; charset=UTF-8";
                 req.ContentLength = data.Length;
                 req.Timeout = 8000;
+                req.CookieContainer = cookies;
                 req.Headers.Add("X-Requested-With", "XMLHttpRequest");
                 req.Referer = "http://" + PORTAL_IP + "/userportal/pages/usermedia/curaj/app/campus/ui/login.html";
 
@@ -133,16 +184,52 @@ namespace CurajConnect
                     stream.Write(data, 0, data.Length);
                 }
 
+                string response = "";
                 using (HttpWebResponse res = (HttpWebResponse)req.GetResponse())
                 using (StreamReader reader = new StreamReader(res.GetResponseStream()))
                 {
-                    string response = reader.ReadToEnd();
-                    if (response.Contains("success_net") || response.Contains("redirect_to_nas") || response.Contains("\"errorKey\":\"success\""))
-                    {
-                        return "SUCCESS";
-                    }
-                    return response;
+                    response = reader.ReadToEnd();
                 }
+
+                // Step 3: Trigger NAS controller handshake if redirect_to_nas
+                if (response.Contains("redirect_to_nas"))
+                {
+                    try
+                    {
+                        HttpWebRequest nasReq = (HttpWebRequest)WebRequest.Create("http://" + NAS_IP + "/");
+                        nasReq.Timeout = 4000;
+                        nasReq.CookieContainer = cookies;
+                        using (HttpWebResponse nasRes = (HttpWebResponse)nasReq.GetResponse()) { }
+                    }
+                    catch { }
+                }
+
+                // Brief pause for firewall route activation
+                Thread.Sleep(1200);
+
+                // Step 4: Rigorously verify genuine internet flow
+                if (IsOnline())
+                {
+                    return "SUCCESS";
+                }
+
+                // Error diagnostics
+                if (response.Contains("Session already running"))
+                {
+                    if (IsOnline()) return "SUCCESS";
+                    return "Session already active on another port. Re-authenticating...";
+                }
+                if (response.Contains("Invalid") || response.Contains("Incorrect") || response.Contains("fail"))
+                {
+                    return "Invalid Mobile Number or Password.";
+                }
+
+                if (response.Contains("success_net") || response.Contains("\"errorKey\":\"success\""))
+                {
+                    if (IsOnline()) return "SUCCESS";
+                }
+
+                return "Gateway responded (" + response.Trim() + "). Verifying connection...";
             }
             catch (Exception ex)
             {
@@ -253,10 +340,15 @@ namespace CurajConnect
                         {
                             PerformLogin(user, pass);
                         }
+                        // Disconnected or re-authenticating: recheck in 5s
+                        Thread.Sleep(5000);
+                        continue;
                     }
                 }
                 catch { }
-                Thread.Sleep(40000);
+
+                // Online: sleep 25 seconds before next check
+                Thread.Sleep(25000);
             }
         }
 
@@ -335,6 +427,9 @@ namespace CurajConnect
         Button btnTestLogin;
         Label lblStatus;
         Label lblPill;
+        Label lblSub;
+        System.Windows.Forms.Timer pollTimer;
+        bool isAuthenticating = false;
 
         // Theme Palette matching portal (alokranjan.me Night Edition)
         static readonly Color ColBg = Color.FromArgb(18, 17, 16);          // #121110
@@ -361,6 +456,17 @@ namespace CurajConnect
                 }
             }
             catch { }
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (pollTimer != null)
+            {
+                pollTimer.Stop();
+                pollTimer.Dispose();
+                pollTimer = null;
+            }
+            base.OnFormClosed(e);
         }
 
         public MainForm()
@@ -390,8 +496,8 @@ namespace CurajConnect
             lblBrand.AutoSize = true;
             pnlHeader.Controls.Add(lblBrand);
 
-            Label lblSub = new Label();
-            lblSub.Text = "Central University of Rajasthan";
+            lblSub = new Label();
+            lblSub.Text = "Central University of Rajasthan • Auto-Start: Checking...";
             lblSub.Font = new Font("Segoe UI", 9f, FontStyle.Regular);
             lblSub.ForeColor = ColMuted;
             lblSub.AutoSize = true;
@@ -403,12 +509,12 @@ namespace CurajConnect
 
             // Status Pill Badge in top right
             lblPill = new Label();
-            lblPill.Text = "○ IDLE";
+            lblPill.Text = "○ CHECKING";
             lblPill.Font = new Font("Segoe UI", 8f, FontStyle.Bold);
             lblPill.ForeColor = ColMuted;
             lblPill.BackColor = Color.FromArgb(35, 33, 30);
-            lblPill.Location = new Point(415, 26);
-            lblPill.Size = new Size(90, 28);
+            lblPill.Location = new Point(390, 26);
+            lblPill.Size = new Size(118, 28);
             lblPill.TextAlign = ContentAlignment.MiddleCenter;
             pnlHeader.Controls.Add(lblPill);
 
@@ -429,124 +535,146 @@ namespace CurajConnect
             Label lblSec1 = new Label();
             lblSec1.Text = "01 • CREDENTIALS";
             lblSec1.Font = new Font("Segoe UI", 8f, FontStyle.Bold);
-            lblSec1.ForeColor = ColMuted;
-            lblSec1.Location = new Point(36, pnlHeader.Bottom + 22);
+            lblSec1.ForeColor = ColAccent;
+            lblSec1.Location = new Point(36, pnlHeader.Bottom + 24);
             lblSec1.AutoSize = true;
             this.Controls.Add(lblSec1);
 
-            Panel pnlCard = new Panel();
-            pnlCard.Location = new Point(36, lblSec1.Bottom + 8);
-            pnlCard.Size = new Size(468, 168);
-            pnlCard.BackColor = ColSurface;
-            pnlCard.Paint += (s, e) => {
-                e.Graphics.DrawRectangle(new Pen(ColBorder, 1), 0, 0, 467, 167);
+            Panel pnlCard1 = new Panel();
+            pnlCard1.Location = new Point(36, lblSec1.Bottom + 8);
+            pnlCard1.Size = new Size(468, 192);
+            pnlCard1.BackColor = ColSurface;
+            pnlCard1.Paint += (s, e) => {
+                e.Graphics.DrawRectangle(new Pen(ColBorder, 1), 0, 0, pnlCard1.Width - 1, pnlCard1.Height - 1);
             };
-            this.Controls.Add(pnlCard);
+            this.Controls.Add(pnlCard1);
 
+            // User field
             Label lblUser = new Label();
-            lblUser.Text = "MOBILE NUMBER (USERNAME)";
+            lblUser.Text = "MOBILE NUMBER (10 DIGITS)";
             lblUser.Font = new Font("Segoe UI", 7.5f, FontStyle.Bold);
             lblUser.ForeColor = ColMuted;
-            lblUser.Location = new Point(18, 16);
+            lblUser.Location = new Point(20, 16);
             lblUser.AutoSize = true;
-            pnlCard.Controls.Add(lblUser);
+            pnlCard1.Controls.Add(lblUser);
 
             txtUser = new TextBox();
-            txtUser.Location = new Point(18, 38);
-            txtUser.Size = new Size(432, 28);
+            txtUser.Location = new Point(20, 36);
+            txtUser.Size = new Size(428, 28);
+            txtUser.Font = new Font("Segoe UI", 10.5f);
             txtUser.BackColor = ColInputBg;
             txtUser.ForeColor = ColText;
             txtUser.BorderStyle = BorderStyle.FixedSingle;
-            txtUser.Font = new Font("Segoe UI", 11f);
             txtUser.MaxLength = 10;
             txtUser.KeyPress += (s, e) => {
-                // Strict numerical input filter
-                if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
-                {
-                    e.Handled = true;
-                }
+                if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar)) e.Handled = true;
             };
-            pnlCard.Controls.Add(txtUser);
+            pnlCard1.Controls.Add(txtUser);
 
+            // Pass field
             Label lblPass = new Label();
             lblPass.Text = "WI-FI PASSWORD";
             lblPass.Font = new Font("Segoe UI", 7.5f, FontStyle.Bold);
             lblPass.ForeColor = ColMuted;
-            lblPass.Location = new Point(18, 86);
+            lblPass.Location = new Point(20, 80);
             lblPass.AutoSize = true;
-            pnlCard.Controls.Add(lblPass);
+            pnlCard1.Controls.Add(lblPass);
 
             txtPass = new TextBox();
-            txtPass.PasswordChar = '●';
-            txtPass.Location = new Point(18, 108);
-            txtPass.Size = new Size(432, 28);
+            txtPass.Location = new Point(20, 100);
+            txtPass.Size = new Size(428, 28);
+            txtPass.Font = new Font("Segoe UI", 10.5f);
             txtPass.BackColor = ColInputBg;
             txtPass.ForeColor = ColText;
             txtPass.BorderStyle = BorderStyle.FixedSingle;
-            txtPass.Font = new Font("Segoe UI", 11f);
-            pnlCard.Controls.Add(txtPass);
+            txtPass.UseSystemPasswordChar = true;
+            pnlCard1.Controls.Add(txtPass);
+
+            CheckBox chkShow = new CheckBox();
+            chkShow.Text = "Show password";
+            chkShow.Font = new Font("Segoe UI", 8.5f);
+            chkShow.ForeColor = ColMuted;
+            chkShow.Location = new Point(20, 140);
+            chkShow.AutoSize = true;
+            chkShow.CheckedChanged += (s, e) => {
+                txtPass.UseSystemPasswordChar = !chkShow.Checked;
+            };
+            pnlCard1.Controls.Add(chkShow);
 
             // --- Section 02: Actions ---
             Label lblSec2 = new Label();
-            lblSec2.Text = "02 • SETUP & CONTROLS";
+            lblSec2.Text = "02 • AUTOMATION ACTIONS";
             lblSec2.Font = new Font("Segoe UI", 8f, FontStyle.Bold);
-            lblSec2.ForeColor = ColMuted;
-            lblSec2.Location = new Point(36, 316);
+            lblSec2.ForeColor = ColAccent;
+            lblSec2.Location = new Point(36, pnlCard1.Bottom + 20);
             lblSec2.AutoSize = true;
             this.Controls.Add(lblSec2);
 
+            Panel pnlCard2 = new Panel();
+            pnlCard2.Location = new Point(36, lblSec2.Bottom + 8);
+            pnlCard2.Size = new Size(468, 114);
+            pnlCard2.BackColor = ColSurface;
+            pnlCard2.Paint += (s, e) => {
+                e.Graphics.DrawRectangle(new Pen(ColBorder, 1), 0, 0, pnlCard2.Width - 1, pnlCard2.Height - 1);
+            };
+            this.Controls.Add(pnlCard2);
+
+            // Register Button (Terracotta Accent)
             btnRegister = new Button();
             btnRegister.Text = "Register Auto-Login";
-            btnRegister.Location = new Point(36, 340);
-            btnRegister.Size = new Size(468, 48);
-            btnRegister.BackColor = ColAccent;
-            btnRegister.ForeColor = Color.White;
+            btnRegister.Location = new Point(18, 16);
+            btnRegister.Size = new Size(208, 42);
             btnRegister.FlatStyle = FlatStyle.Flat;
             btnRegister.FlatAppearance.BorderSize = 0;
-            btnRegister.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
+            btnRegister.BackColor = ColAccent;
+            btnRegister.ForeColor = Color.White;
+            btnRegister.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
             btnRegister.Cursor = Cursors.Hand;
             btnRegister.Click += BtnRegister_Click;
-            this.Controls.Add(btnRegister);
+            pnlCard2.Controls.Add(btnRegister);
 
-            btnTestLogin = new Button();
-            btnTestLogin.Text = "Test Connection";
-            btnTestLogin.Location = new Point(36, 402);
-            btnTestLogin.Size = new Size(226, 42);
-            btnTestLogin.BackColor = ColSurface;
-            btnTestLogin.ForeColor = ColText;
-            btnTestLogin.FlatStyle = FlatStyle.Flat;
-            btnTestLogin.FlatAppearance.BorderColor = ColBorder;
-            btnTestLogin.Font = new Font("Segoe UI", 9.5f);
-            btnTestLogin.Cursor = Cursors.Hand;
-            btnTestLogin.Click += BtnTestLogin_Click;
-            this.Controls.Add(btnTestLogin);
-
+            // Deregister Button (Muted Dark)
             btnDeregister = new Button();
-            btnDeregister.Text = "Deregister";
-            btnDeregister.Location = new Point(278, 402);
-            btnDeregister.Size = new Size(226, 42);
-            btnDeregister.BackColor = ColSurface;
-            btnDeregister.ForeColor = ColMuted;
+            btnDeregister.Text = "Deregister & Delete";
+            btnDeregister.Location = new Point(242, 16);
+            btnDeregister.Size = new Size(208, 42);
             btnDeregister.FlatStyle = FlatStyle.Flat;
             btnDeregister.FlatAppearance.BorderColor = ColBorder;
-            btnDeregister.Font = new Font("Segoe UI", 9.5f);
+            btnDeregister.BackColor = ColInputBg;
+            btnDeregister.ForeColor = ColMuted;
+            btnDeregister.Font = new Font("Segoe UI", 9f, FontStyle.Regular);
             btnDeregister.Cursor = Cursors.Hand;
             btnDeregister.Click += BtnDeregister_Click;
-            this.Controls.Add(btnDeregister);
+            pnlCard2.Controls.Add(btnDeregister);
 
-            // --- Status and Feedback ---
+            // Test Connection Button (Secondary outline)
+            btnTestLogin = new Button();
+            btnTestLogin.Text = "Test Connection / Reconnect Now";
+            btnTestLogin.Location = new Point(18, 66);
+            btnTestLogin.Size = new Size(432, 34);
+            btnTestLogin.FlatStyle = FlatStyle.Flat;
+            btnTestLogin.FlatAppearance.BorderColor = ColBorder;
+            btnTestLogin.BackColor = Color.Transparent;
+            btnTestLogin.ForeColor = ColText;
+            btnTestLogin.Font = new Font("Segoe UI", 8.5f, FontStyle.Regular);
+            btnTestLogin.Cursor = Cursors.Hand;
+            btnTestLogin.Click += BtnTestLogin_Click;
+            pnlCard2.Controls.Add(btnTestLogin);
+
+            // Status Bar at Bottom
             lblStatus = new Label();
-            lblStatus.Location = new Point(36, 466);
-            lblStatus.Size = new Size(468, 48);
+            lblStatus.Text = "Initializing connection check...";
+            lblStatus.Location = new Point(36, pnlCard2.Bottom + 16);
+            lblStatus.Size = new Size(468, 38);
             lblStatus.TextAlign = ContentAlignment.MiddleCenter;
             lblStatus.ForeColor = ColMuted;
-            lblStatus.Font = new Font("Segoe UI", 9.5f);
+            lblStatus.Font = new Font("Segoe UI", 9f, FontStyle.Regular);
             this.Controls.Add(lblStatus);
 
-            // Footer note
+            // Footer credits
             Label lblFooter = new Label();
             lblFooter.Text = "100% Client-Side & Local • Zero Admin Rights • Open Source";
-            lblFooter.Location = new Point(36, 595);
+            lblFooter.Location = new Point(36, 610);
             lblFooter.Size = new Size(468, 24);
             lblFooter.TextAlign = ContentAlignment.MiddleCenter;
             lblFooter.ForeColor = Color.FromArgb(90, 86, 80);
@@ -554,6 +682,12 @@ namespace CurajConnect
             this.Controls.Add(lblFooter);
 
             LoadSavedData();
+
+            // Background polling timer for real-time network status (every 3.5s)
+            pollTimer = new System.Windows.Forms.Timer();
+            pollTimer.Interval = 3500;
+            pollTimer.Tick += (s, ev) => RefreshNetworkState(true);
+            pollTimer.Start();
         }
 
         void LoadSavedData()
@@ -561,22 +695,8 @@ namespace CurajConnect
             string u, p;
             bool hasCreds = Program.LoadCredentials(out u, out p);
 
-            if (Program.IsAutoStartRegistered())
-            {
-                lblStatus.Text = "✓ Auto-login active and registered on this PC.";
-                lblStatus.ForeColor = ColGreen;
-                lblPill.Text = "● ACTIVE";
-                lblPill.ForeColor = ColGreen;
-                lblPill.BackColor = ColGreenBg;
-            }
-            else
-            {
-                lblStatus.Text = "Not registered. Enter credentials and click Register.";
-                lblStatus.ForeColor = ColMuted;
-                lblPill.Text = "○ IDLE";
-                lblPill.ForeColor = ColMuted;
-                lblPill.BackColor = Color.FromArgb(35, 33, 30);
-            }
+            bool isReg = Program.IsAutoStartRegistered();
+            lblSub.Text = "Central University of Rajasthan • Auto-Start: " + (isReg ? "ACTIVE" : "OFF");
 
             // Auto-fill saved credentials if available
             if (hasCreds)
@@ -589,6 +709,117 @@ namespace CurajConnect
                 txtUser.Text = "";
                 txtPass.Text = "";
             }
+
+            // Trigger immediate real-time network state check
+            RefreshNetworkState(true);
+        }
+
+        void RefreshNetworkState(bool autoLoginIfExpired)
+        {
+            ThreadPool.QueueUserWorkItem((state) => {
+                bool online = Program.IsOnline();
+                bool portal = false;
+                if (!online)
+                {
+                    portal = Program.IsPortalReachable();
+                }
+
+                if (this.IsDisposed || !this.IsHandleCreated) return;
+
+                this.BeginInvoke(new Action(() => {
+                    if (this.IsDisposed) return;
+
+                    if (online)
+                    {
+                        lblPill.Text = "● ONLINE";
+                        lblPill.ForeColor = ColGreen;
+                        lblPill.BackColor = ColGreenBg;
+                        if (!isAuthenticating)
+                        {
+                            lblStatus.Text = "✓ Internet connection verified and active.";
+                            lblStatus.ForeColor = ColGreen;
+                        }
+                    }
+                    else if (portal)
+                    {
+                        lblPill.Text = "● LOGIN NEEDED";
+                        lblPill.ForeColor = Color.White;
+                        lblPill.BackColor = ColAccent;
+                        if (!isAuthenticating)
+                        {
+                            lblStatus.Text = "⚠ Action Needed: CURAJ Wi-Fi session expired or inactive.";
+                            lblStatus.ForeColor = ColAccent;
+
+                            // If credentials are saved, auto-authenticate seamlessly
+                            if (autoLoginIfExpired)
+                            {
+                                string u = txtUser.Text.Trim();
+                                string p = txtPass.Text;
+                                if (!string.IsNullOrEmpty(u) && !string.IsNullOrEmpty(p))
+                                {
+                                    TriggerAutoLogin(u, p, false);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        lblPill.Text = "○ NO WI-FI";
+                        lblPill.ForeColor = ColMuted;
+                        lblPill.BackColor = Color.FromArgb(35, 33, 30);
+                        if (!isAuthenticating)
+                        {
+                            lblStatus.Text = "Not connected to CURAJ network gateway.";
+                            lblStatus.ForeColor = ColMuted;
+                        }
+                    }
+                }));
+            });
+        }
+
+        void TriggerAutoLogin(string user, string pass, bool showPopup)
+        {
+            if (isAuthenticating) return;
+            isAuthenticating = true;
+
+            lblPill.Text = "⚡ CONNECTING";
+            lblPill.ForeColor = ColAccent;
+            lblPill.BackColor = Color.FromArgb(43, 34, 26);
+            lblStatus.Text = "Authenticating with CURAJ gateway...";
+            lblStatus.ForeColor = ColAccent;
+
+            ThreadPool.QueueUserWorkItem((state) => {
+                string res = Program.PerformLogin(user, pass);
+                if (this.IsDisposed || !this.IsHandleCreated) return;
+
+                this.BeginInvoke(new Action(() => {
+                    isAuthenticating = false;
+                    if (this.IsDisposed) return;
+
+                    if (res == "SUCCESS")
+                    {
+                        lblPill.Text = "● ONLINE";
+                        lblPill.ForeColor = ColGreen;
+                        lblPill.BackColor = ColGreenBg;
+                        lblStatus.Text = "✓ Login successful! Campus internet active.";
+                        lblStatus.ForeColor = ColGreen;
+                        if (showPopup)
+                        {
+                            MessageBox.Show("Login successful! You are connected to campus internet.", "Connected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                    }
+                    else
+                    {
+                        lblStatus.Text = res;
+                        lblStatus.ForeColor = ColRed;
+                        if (showPopup)
+                        {
+                            MessageBox.Show("Gateway response: " + res, "Gateway Status", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                        RefreshNetworkState(false);
+                    }
+                }));
+            });
         }
 
         void BtnRegister_Click(object sender, EventArgs e)
@@ -619,11 +850,10 @@ namespace CurajConnect
             if (ok)
             {
                 Program.StartBackgroundWatch(targetExe);
+                lblSub.Text = "Central University of Rajasthan • Auto-Start: ACTIVE";
                 lblStatus.Text = "✓ Registered successfully! Silent watchdog is active.";
                 lblStatus.ForeColor = ColGreen;
-                lblPill.Text = "● ACTIVE";
-                lblPill.ForeColor = ColGreen;
-                lblPill.BackColor = ColGreenBg;
+                TriggerAutoLogin(user, pass, false);
                 MessageBox.Show("Auto-Login is now active!\n\nYour PC will now automatically authenticate to 'CURAJ CAMPUS CONNECT' whenever you connect.", "Campus Connect", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
@@ -640,11 +870,10 @@ namespace CurajConnect
             txtUser.Text = "";
             txtPass.Text = "";
 
+            lblSub.Text = "Central University of Rajasthan • Auto-Start: OFF";
             lblStatus.Text = "Auto-login deregistered & credentials deleted.";
             lblStatus.ForeColor = ColRed;
-            lblPill.Text = "○ IDLE";
-            lblPill.ForeColor = ColMuted;
-            lblPill.BackColor = Color.FromArgb(35, 33, 30);
+            RefreshNetworkState(false);
             MessageBox.Show("Campus Connect has been completely deregistered.\n\nSaved credentials and startup tasks have been deleted.", "Deregistered", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -658,23 +887,7 @@ namespace CurajConnect
                 return;
             }
 
-            lblStatus.Text = "Connecting to university gateway (122.252.242.93)...";
-            lblStatus.ForeColor = ColAccent;
-            Application.DoEvents();
-
-            string res = Program.PerformLogin(user, pass);
-            if (res == "SUCCESS")
-            {
-                lblStatus.Text = "✓ Login successful! Campus internet active.";
-                lblStatus.ForeColor = ColGreen;
-                MessageBox.Show("Login successful! You are connected to campus internet.", "Connected", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            else
-            {
-                lblStatus.Text = "Gateway response: " + res;
-                lblStatus.ForeColor = ColRed;
-                MessageBox.Show("Gateway response: " + res, "Gateway Status", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
+            TriggerAutoLogin(user, pass, true);
         }
     }
 }
