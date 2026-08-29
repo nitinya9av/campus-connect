@@ -5,3 +5,6 @@ __pycache__/
 windows/*.exe
 unsigned-app.zip
 signed-binaries/
+node_modules/
+.expo/
+
