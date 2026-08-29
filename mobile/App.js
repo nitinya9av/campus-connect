@@ -12,6 +12,7 @@ import {
   Alert,
   AppState,
   NativeModules,
+  Linking,
 } from 'react-native';
 
 const { CampusConnectModule } = NativeModules;
@@ -440,6 +441,15 @@ function CampusConnectMain() {
               <Text style={styles.footerText}>
                 100% Client-Side & Local • Zero Telemetry • Open Source
               </Text>
+              <TouchableOpacity
+                onPress={() => Linking.openURL('https://nitinyadav.xyz/campus-connect/privacy')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{ marginTop: 8 }}
+              >
+                <Text style={[styles.footerText, { color: colors.muted, textDecorationLine: 'underline' }]}>
+                  Privacy Policy
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>

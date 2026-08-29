@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy &middot; Campus Connect</title>
+  <meta name="description"
+    content="Privacy Policy for Campus Connect (Android & Windows). Zero telemetry, 100% client-side, local credential storage only.">
+  <link rel="icon" type="image/png" href="../favicon.png">
+  <link rel="apple-touch-icon" href="../favicon.png">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .policy-header {
+      padding: 3rem 0 2rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2.5rem;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-decoration: none;
+      margin-bottom: 1.25rem;
+      transition: color 0.15s ease;
+    }
+
+    .back-link:hover {
+      color: var(--accent);
+    }
+
+    .policy-title {
+      font-family: var(--font-serif);
+      font-size: 2.25rem;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      color: var(--foreground);
+      margin-bottom: 0.5rem;
+    }
+
+    .policy-meta {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--faint);
+    }
+
+    .policy-section {
+      margin-bottom: 2.25rem;
+    }
+
+    .policy-section h2 {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 0.85rem;
+    }
+
+    .policy-section p {
+      color: var(--muted);
+      font-size: 0.9375rem;
+      line-height: 1.7;
+      margin-bottom: 0.85rem;
+    }
+
+    .policy-section ul {
+      list-style: none;
+      padding-left: 0;
+      margin: 0.85rem 0;
+    }
+
+    .policy-section ul li {
+      position: relative;
+      padding-left: 1.25rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.65;
+      margin-bottom: 0.6rem;
+    }
+
+    .policy-section ul li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+    }
+
+    .policy-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.25rem 1.5rem;
+      margin: 1rem 0 1.5rem;
+    }
+
+    .policy-card code {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      background: var(--surface-2);
+      padding: 0.15rem 0.35rem;
+      border-radius: 2px;
+      color: var(--foreground);
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <div class="page-column">
+      <div class="policy-header">
+        <a href="../" class="back-link">&larr; back to portal</a>
+        <h1 class="policy-title">Privacy Policy</h1>
+        <div class="policy-meta">
+          Application: Campus Connect
+        </div>
+      </div>
+
+      <div class="policy-section">
+        <h2>01 &middot; Commitment to User Privacy</h2>
+        <p>
+          <strong>Campus Connect</strong> ("the Application") is an open-source utility designed exclusively for
+          students, faculty, and staff of the <strong>Central University of Rajasthan (CURAJ)</strong> to automate login
+          against the campus Wi-Fi captive portal network.
+        </p>
+        <p>
+          We hold an absolute, uncompromising commitment to user privacy: <strong>We do not collect, harvest, store on
+            remote servers, monetize, or share any personal data or usage analytics.</strong> The Application executes
+          100% client-side on your device.
+        </p>
+      </div>
+
+      <div class="policy-section">
+        <h2>02 &middot; Data Handled & Storage</h2>
+        <p>
+          To perform automated captive portal login on your behalf, the Application handles the following information:
+        </p>
+        <div class="policy-card">
+          <ul>
+            <li><strong>Username (Mobile Number):</strong> Used solely to construct the standard authentication payload
+              required by the university gateway.</li>
+            <li><strong>Wi-Fi Password:</strong> Used solely to authenticate with the official CURAJ campus gateway.
+            </li>
+          </ul>
+        </div>
+        <p>
+          <strong>Local Storage Only:</strong> Your credentials are saved exclusively within the secure, private local
+          storage of your device (Android <code>AsyncStorage</code> / <code>SharedPreferences</code> and Windows
+          <code>%APPDATA%</code>). Credentials are never sent to, proxied through, or backed up to any
+          developer-controlled servers or third parties.
+        </p>
+      </div>
+
+      <div class="policy-section">
+        <h2>03 &middot; Network Transmission & Gateway Destination</h2>
+        <p>
+          When authenticating, your credentials are submitted directly over your local campus Wi-Fi network to the
+          official university network access hardware:
+        </p>
+        <ul>
+          <li><strong>Official CURAJ Gateway:</strong> <code>http://122.252.242.93/userportal/newlogin.do</code></li>
+          <li><strong>Inventum NAS Controller:</strong> <code>http://1.254.254.254/</code> (used for firewall route
+            authorization)</li>
+          <li><strong>Connectivity Probes:</strong> <code>https://www.google.com/generate_204</code> (standard
+            zero-content probe used solely to verify active internet throughput)</li>
+        </ul>
+        <p>
+          At no point are credentials transmitted to any third-party domain, advertising network, or cloud service.
+        </p>
+      </div>
+
+      <div class="policy-section">
+        <h2>04 &middot; Android Device Permissions</h2>
+        <p>
+          The Android application requests only the minimum set of permissions necessary to function:
+        </p>
+        <ul>
+          <li><code>INTERNET</code> &mdash; Required to send HTTP authentication requests to the campus gateway and
+            verify internet access.</li>
+          <li><code>ACCESS_NETWORK_STATE</code> &amp; <code>ACCESS_WIFI_STATE</code> &mdash; Required to detect when the
+            device connects to the campus Wi-Fi network so auto-login can trigger.</li>
+          <li><code>FOREGROUND_SERVICE</code> &amp; <code>FOREGROUND_SERVICE_DATA_SYNC</code> &mdash; Required on
+            Android to maintain a background network listener that automatically re-authenticates the device when Wi-Fi
+            reconnects or sessions expire, without requiring the user to manually open the app.</li>
+          <li><code>POST_NOTIFICATIONS</code> &mdash; Required by modern Android to run the background connection
+            service with a minimized, silent status indication.</li>
+        </ul>
+      </div>
+
+      <div class="policy-section">
+        <h2>05 &middot; Data Deletion & Deregistration</h2>
+        <p>
+          You retain complete control over your stored credentials at all times:
+        </p>
+        <ul>
+          <li><strong>In-App Deregistration:</strong> Tapping the <strong>"Deregister"</strong> button inside the app
+            immediately and permanently erases all saved credentials from your device's local storage and stops
+            background services.</li>
+          <li><strong>Uninstalling the App:</strong> Uninstalling Campus Connect automatically wipes all application
+            data, local storage, and cached files managed by your operating system.</li>
+        </ul>
+      </div>
+
+      <div class="policy-section">
+        <h2>06 &middot; Third-Party Services & SDKs</h2>
+        <p>
+          Campus Connect does <strong>not</strong> integrate any third-party analytics (e.g., Google Analytics, Firebase
+          Analytics), advertising SDKs (e.g., AdMob), user tracking tools, or remote crash reporting frameworks.
+        </p>
+      </div>
+
+      <div class="policy-section">
+        <h2>07 &middot; Open Source & Transparency</h2>
+        <p>
+          Campus Connect is free, open-source software licensed under the MIT License. The complete source code for both
+          the Windows desktop client and Android mobile app is public, auditable, and open for community review on
+          GitHub:
+        </p>
+        <p>
+          <a href="https://github.com/nitinya9av/campus-connect" target="_blank" rel="noopener" class="ext"
+            style="color: var(--accent); font-family: var(--font-mono);">https://github.com/nitinya9av/campus-connect</a>
+        </p>
+      </div>
+
+      <div class="policy-section">
+        <h2>08 &middot; Developer Contact</h2>
+        <p>
+          If you have any questions, concerns, or inquiries regarding this Privacy Policy or the security of the
+          application, please reach out via GitHub or email:
+        </p>
+        <div class="policy-card">
+          <div style="font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.8;">
+            Developer: <strong>Nitin Yadav</strong><br>
+            Project: <strong>Campus Connect (CURAJ)</strong><br>
+            GitHub: <a href="https://github.com/nitinya9av/campus-connect/issues" target="_blank" rel="noopener"
+              class="ext" style="color: var(--accent);">github.com/nitinya9av/campus-connect</a><br>
+            Website: <a href="https://nitinyadav.xyz/campus-connect/" target="_blank" rel="noopener" class="ext"
+              style="color: var(--accent);">nitinyadav.xyz/campus-connect/</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Minimalist Footer -->
+  <footer>
+    <div class="page-column">
+      <ul class="footer-links">
+        <li><a href="../">home</a></li>
+        <li><a href="https://github.com/nitinya9av/campus-connect" target="_blank" rel="noopener" class="ext">github</a>
+        </li>
+        <li><a href="./" style="color: var(--accent);">privacy policy</a></li>
+      </ul>
+      <p>campus connect &middot; open source</p>
+    </div>
+  </footer>
+
+  <script src="../app.js"></script>
+</body>
+
+</html>
