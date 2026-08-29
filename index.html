@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campus Connect</title>
+  <meta name="description"
+    content="Automated 1-click captive portal login for Central University of Rajasthan Wi-Fi. Client-side, open source, zero admin rights.">
+  <script>
+    (() => {
+      try {
+        if (localStorage.getItem('theme') === 'dark') {
+          document.documentElement.classList.add('dark');
+        }
+      } catch { }
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Sticky Minimalist Navigation -->
+  <header class="running-head">
+    <div class="page-column running-head-inner">
+      <a href="#" class="head-brand">
+        <span class="dot"></span>
+        <span>campus<span style="color: var(--muted)">.connect</span></span>
+      </a>
+
+      <nav class="nav-links" aria-label="Main navigation">
+        <button id="tab-btn-windows" class="nav-item active" onclick="switchTab('windows')">
+          windows
+        </button>
+        <button id="tab-btn-android" class="nav-item" onclick="switchTab('android')">
+          android
+        </button>
+        <a href="#security" class="nav-item">
+          security
+        </a>
+        <button id="mode-toggle" class="mode-toggle" type="button" aria-label="Toggle dark mode" title="Toggle theme">
+          ☾
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="page-column">
+
+      <!-- Editorial Hero Header -->
+      <section class="hero">
+        <h1>Campus <span class="dimmed">Connect</span></h1>
+        <p class="hero-meta">CURAJ WI-FI &middot; 1-CLICK AUTOMATION</p>
+        <div class="hero-standfirst">
+          <p>
+            Automates the captive portal login for Central University of Rajasthan.
+            Client-side, zero admin required, and reversible in one click.
+          </p>
+        </div>
+      </section>
+
+      <!-- WINDOWS SECTION                                -->
+      <div id="panel-windows" class="tab-panel active">
+        <section class="content-section">
+          <h2 class="section-label">01 &middot; Credentials</h2>
+          <p style="color: var(--muted); font-size: 0.88rem;">
+            Your credentials remain in your browser session to generate your installer and are saved strictly on your
+            local PC.
+          </p>
+
+          <div class="minimal-form">
+            <div class="form-row">
+              <label for="winUser">Mobile Number / Username</label>
+              <input type="text" id="winUser" placeholder="e.g. 4780200489" maxlength="10" inputmode="numeric"
+                pattern="[0-9]*" autocomplete="username">
+            </div>
+            <div class="form-row">
+              <label for="winPass">Wi-Fi Password</label>
+              <input type="password" id="winPass" placeholder="Enter Wi-Fi password" autocomplete="current-password">
+            </div>
+          </div>
+
+          <h2 class="section-label" style="margin-top: 2rem;">02 &middot; 1-Click Setup</h2>
+          <p style="color: var(--muted); font-size: 0.88rem;">
+            Choose your preferred method. Both run in user space without requiring administrator privileges:
+          </p>
+
+          <div class="btn-row">
+            <button id="winDownloadBtn" class="btn btn-primary" onclick="downloadPersonalizedWindowsBat()" disabled>
+              Download 1-Click Setup (.bat)
+            </button>
+            <a href="windows/curaj_connect.exe" download="curaj_connect.exe" class="btn btn-outline ext">
+              Portable App (.exe)
+            </a>
+          </div>
+
+          <!-- Deregister Option -->
+          <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px dashed var(--border);">
+            <div
+              style="display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+              <div>
+                <span class="section-label" style="display: block; margin-bottom: 0.2rem;">Want to turn it off?</span>
+                <span style="font-size: 0.84rem; color: var(--muted);">Completely clean up startup entries and local
+                  config anytime.</span>
+              </div>
+              <button class="btn btn-danger" onclick="downloadDeregisterBat()">
+                Download Deregister Script (.bat)
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ANDROID SECTION -->
+      <div id="panel-android" class="tab-panel">
+        <section class="content-section">
+          <h2 class="section-label">Android App &middot; In Development</h2>
+          <p
+            style="color: var(--foreground); font-size: 1.05rem; font-family: var(--font-serif); font-weight: 500; margin-bottom: 0.75rem;">
+            A lightweight, dedicated Android app is currently under construction.
+          </p>
+          <p style="color: var(--muted); font-size: 0.9rem; line-height: 1.65; max-width: 52ch;">
+            No third-party automation tools or complex setup. Just install the app, enter your credentials once, and you
+            are connected forever. Want to stop? Simply uninstall the app to completely deregister.
+          </p>
+
+          <div class="notice-note" style="margin-top: 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+            <span
+              style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background-color: var(--accent);"></span>
+            <span>Coming soon &middot; under construction</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- SECURITY & OPEN SOURCE GUARANTEE               -->
+      <section id="security" class="content-section">
+        <h2 class="section-label">Security &middot; Transparency</h2>
+        <ul class="guarantee-list">
+          <li>
+            <span><strong>Zero Data Collection:</strong> Executed 100% client-side in your browser. Passwords are never
+              sent to or logged on any server.</span>
+          </li>
+          <li>
+            <span><strong>Direct Gateway:</strong> HTTP requests target the official university captive portal
+              (<code>122.252.242.93</code>).</span>
+          </li>
+          <li>
+            <span><strong>Zero Admin Elevation:</strong> Runs with standard user privileges without modifying
+              system-level OS files.</span>
+          </li>
+          <li>
+            <span><strong>100% Open Source:</strong> Complete source code for scripts, C# binaries, and webpage is
+              public and inspectable.</span>
+          </li>
+        </ul>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Minimalist Footer -->
+  <footer>
+    <div class="page-column">
+      <ul class="footer-links">
+        <li><a href="https://github.com/nitinya9av/campus-connect" target="_blank" rel="noopener" class="ext">github</a>
+        </li>
+      </ul>
+      <p>campus connect &middot; open source</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+
+</body>
+
+</html>
