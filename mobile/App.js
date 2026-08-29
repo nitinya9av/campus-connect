@@ -6,18 +6,27 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from './src/styles/theme';
 import { saveCredentials, getCredentials, clearCredentials } from './src/storage/credentials';
 import { loginToGateway, checkInternetAccess, isGatewayReachable } from './src/api/gateway';
 
 export default function App() {
+  return (
+    <SafeAreaProvider>
+      <CampusConnectMain />
+    </SafeAreaProvider>
+  );
+}
+
+function CampusConnectMain() {
+  const insets = useSafeAreaInsets();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -147,42 +156,59 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="light" backgroundColor={colors.surface} />
+    <View style={styles.root}>
+      <StatusBar style="light" translucent backgroundColor="transparent" />
+
+      {/* Header Panel with Dynamic Safe Area Top Inset */}
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 24 : 0) + 12,
+          },
+        ]}
+      >
+        <View style={styles.brandRow}>
+          <View style={styles.terracottaDot} />
+          <View style={styles.brandTextCol}>
+            <Text style={styles.brandTitle} numberOfLines={1}>
+              campus.connect
+            </Text>
+            <Text style={styles.brandSub} numberOfLines={1}>
+              Central University of Rajasthan
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.statusPill,
+            isRegistered ? styles.statusPillActive : styles.statusPillIdle,
+          ]}
+        >
+          <Text
+            style={[
+              styles.statusPillText,
+              isRegistered ? styles.statusPillTextActive : styles.statusPillTextIdle,
+            ]}
+          >
+            {isLoading ? '● CONNECTING' : isRegistered ? '● ACTIVE' : '○ IDLE'}
+          </Text>
+        </View>
+      </View>
+
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: Math.max(insets.bottom, 16) + 32 },
+          ]}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Header Panel */}
-          <View style={styles.header}>
-            <View style={styles.brandRow}>
-              <View style={styles.terracottaDot} />
-              <View>
-                <Text style={styles.brandTitle}>campus.connect</Text>
-                <Text style={styles.brandSub}>Central University of Rajasthan</Text>
-              </View>
-            </View>
-
-            <View
-              style={[
-                styles.statusPill,
-                isRegistered ? styles.statusPillActive : styles.statusPillIdle,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statusPillText,
-                  isRegistered ? styles.statusPillTextActive : styles.statusPillTextIdle,
-                ]}
-              >
-                {isLoading ? '● CONNECTING' : isRegistered ? '● ACTIVE' : '○ IDLE'}
-              </Text>
-            </View>
-          </View>
 
           {/* Body Container */}
           <View style={styles.container}>
@@ -300,12 +326,12 @@ export default function App() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  root: {
     flex: 1,
     backgroundColor: colors.bg,
   },
@@ -314,8 +340,8 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: colors.surface,
-    paddingHorizontal: 24,
-    paddingVertical: 18,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     flexDirection: 'row',
@@ -325,30 +351,39 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
   },
   terracottaDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
     backgroundColor: colors.accent,
-    marginRight: 14,
+    marginRight: 12,
+  },
+  brandTextCol: {
+    flex: 1,
+    justifyContent: 'center',
   },
   brandTitle: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    fontSize: 16,
+    fontSize: 16.5,
     fontWeight: '700',
     color: colors.text,
     letterSpacing: -0.2,
+    includeFontPadding: false,
   },
   brandSub: {
-    fontSize: 11.5,
+    fontSize: 11,
     color: colors.muted,
     marginTop: 2,
+    includeFontPadding: false,
   },
   statusPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
     borderRadius: 14,
+    flexShrink: 0,
   },
   statusPillActive: {
     backgroundColor: colors.greenBg,
