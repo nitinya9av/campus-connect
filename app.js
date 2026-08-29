@@ -1,8 +1,3 @@
-// ===================================================================
-// Campus Connect - Client Script
-// Theme Toggle (Warm Paper / Night Edition) & Navigation
-// ===================================================================
-
 const root = document.documentElement;
 const modeBtn = document.getElementById("mode-toggle");
 
@@ -20,7 +15,7 @@ if (modeBtn) {
     root.classList.toggle("dark", isDark);
     try {
       localStorage.setItem("theme", isDark ? "dark" : "light");
-    } catch {}
+    } catch { }
     updateModeIcon();
   });
 }
