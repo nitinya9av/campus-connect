@@ -78,3 +78,10 @@ A dedicated, lightweight Android client is currently under construction.
 - **Zero Data Collection**: This project does not have a backend server or telemetry. Everything executes locally in the browser or on your device.
 - **Local Storage Only**: On Windows, credentials live strictly in `%APPDATA%\CURAJ_Connect\config.json` to authenticate with the university gateway.
 - **Direct Connection**: All HTTP requests are sent directly to the official CURAJ captive portal (`122.252.242.93`).
+
+---
+
+## Acknowledgements
+
+Free code signing provided by the [SignPath Foundation](https://signpath.org).
+
