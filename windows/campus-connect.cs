@@ -35,6 +35,19 @@ namespace CurajConnect
             File.WriteAllText(GetConfigFile(), json);
         }
 
+        public static void DeleteCredentials()
+        {
+            try
+            {
+                string path = GetConfigFile();
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch { }
+        }
+
         public static bool LoadCredentials(out string user, out string pass)
         {
             user = ""; pass = "";
@@ -168,6 +181,9 @@ namespace CurajConnect
 
                 // Kill any running watch instance
                 KillBackgroundWatch();
+
+                // Delete local saved credentials
+                DeleteCredentials();
                 return true;
             }
             catch { }
@@ -280,11 +296,30 @@ namespace CurajConnect
                 }
             }
 
-            // Otherwise show GUI
+            // 1. Enable Native Per-Monitor High DPI Awareness (fixes scaling blurriness)
+            try
+            {
+                SetProcessDpiAwareness(2); // Process_Per_Monitor_DPI_Aware
+            }
+            catch
+            {
+                try { SetProcessDPIAware(); } catch { }
+            }
+
+            // 2. Launch GUI with native visual styles and ClearType
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new MainForm());
         }
+
+        [System.Runtime.InteropServices.DllImport("shcore.dll")]
+        static extern int SetProcessDpiAwareness(int awareness);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        static extern bool SetProcessDPIAware();
+
+        [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
+        public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
     }
 
     public class MainForm : Form
@@ -295,118 +330,260 @@ namespace CurajConnect
         Button btnDeregister;
         Button btnTestLogin;
         Label lblStatus;
+        Label lblPill;
+
+        // Theme Palette matching portal (alokranjan.me Night Edition)
+        static readonly Color ColBg = Color.FromArgb(18, 17, 16);          // #121110
+        static readonly Color ColSurface = Color.FromArgb(26, 25, 23);     // #1a1917
+        static readonly Color ColInputBg = Color.FromArgb(20, 19, 18);     // #141312
+        static readonly Color ColBorder = Color.FromArgb(46, 44, 40);      // #2e2c28
+        static readonly Color ColText = Color.FromArgb(234, 230, 223);     // #eae6df
+        static readonly Color ColMuted = Color.FromArgb(142, 138, 130);    // #8e8a82
+        static readonly Color ColAccent = Color.FromArgb(217, 83, 47);     // #d9532f (Terracotta)
+        static readonly Color ColGreen = Color.FromArgb(52, 211, 153);     // #34d399
+        static readonly Color ColGreenBg = Color.FromArgb(22, 45, 34);
+        static readonly Color ColRed = Color.FromArgb(248, 113, 113);
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            try
+            {
+                int darkMode = 1;
+                // Enable immersive dark mode on Windows 11 (attr 20) & Windows 10 (attr 19)
+                if (Program.DwmSetWindowAttribute(this.Handle, 20, ref darkMode, sizeof(int)) != 0)
+                {
+                    Program.DwmSetWindowAttribute(this.Handle, 19, ref darkMode, sizeof(int));
+                }
+            }
+            catch { }
+        }
 
         public MainForm()
         {
-            this.Text = "CURAJ Campus Connect - 1-Click Auto Login";
-            this.Size = new Size(460, 360);
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.Text = "Campus Connect • CURAJ";
+            this.AutoScaleMode = AutoScaleMode.None;
+            this.ClientSize = new Size(540, 670);
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(15, 23, 42);
-            this.ForeColor = Color.White;
+            this.BackColor = ColBg;
+            this.ForeColor = ColText;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-            Label lblTitle = new Label();
-            lblTitle.Text = "CURAJ Wi-Fi Auto-Login";
-            lblTitle.Font = new Font("Segoe UI", 14f, FontStyle.Bold);
-            lblTitle.ForeColor = Color.FromArgb(56, 189, 248);
-            lblTitle.Location = new Point(25, 18);
-            lblTitle.AutoSize = true;
-            this.Controls.Add(lblTitle);
+            // --- Top Navigation / Running Head ---
+            Panel pnlHeader = new Panel();
+            pnlHeader.Location = new Point(0, 0);
+            pnlHeader.Size = new Size(540, 94);
+            pnlHeader.BackColor = ColSurface;
+            this.Controls.Add(pnlHeader);
+
+            Label lblBrand = new Label();
+            lblBrand.Text = "campus.connect";
+            lblBrand.Font = new Font("Segoe UI", 13f, FontStyle.Bold);
+            lblBrand.ForeColor = ColText;
+            lblBrand.Location = new Point(50, 20);
+            lblBrand.AutoSize = true;
+            pnlHeader.Controls.Add(lblBrand);
 
             Label lblSub = new Label();
-            lblSub.Text = "Automates login on 'CURAJ CAMPUS CONNECT'. Open Source & Local.";
-            lblSub.ForeColor = Color.FromArgb(148, 163, 184);
-            lblSub.Location = new Point(27, 48);
-            lblSub.Size = new Size(400, 20);
-            this.Controls.Add(lblSub);
+            lblSub.Text = "Central University of Rajasthan";
+            lblSub.Font = new Font("Segoe UI", 9f, FontStyle.Regular);
+            lblSub.ForeColor = ColMuted;
+            lblSub.AutoSize = true;
+            lblSub.Location = new Point(52, lblBrand.Bottom + 4);
+            pnlHeader.Controls.Add(lblSub);
+
+            // Adjust header height dynamically with generous padding
+            pnlHeader.Height = Math.Max(94, lblSub.Bottom + 18);
+
+            // Status Pill Badge in top right
+            lblPill = new Label();
+            lblPill.Text = "○ IDLE";
+            lblPill.Font = new Font("Segoe UI", 8f, FontStyle.Bold);
+            lblPill.ForeColor = ColMuted;
+            lblPill.BackColor = Color.FromArgb(35, 33, 30);
+            lblPill.Location = new Point(415, 26);
+            lblPill.Size = new Size(90, 28);
+            lblPill.TextAlign = ContentAlignment.MiddleCenter;
+            pnlHeader.Controls.Add(lblPill);
+
+            pnlHeader.Paint += (s, e) => {
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+                int lineY = pnlHeader.Height - 1;
+                e.Graphics.DrawLine(new Pen(ColBorder, 1), 0, lineY, pnlHeader.Width, lineY);
+                // Terracotta dot vertically aligned with brand text
+                using (Brush b = new SolidBrush(ColAccent))
+                {
+                    int dotY = lblBrand.Top + (lblBrand.Height / 2) - 5;
+                    e.Graphics.FillEllipse(b, 28, dotY, 10, 10);
+                }
+            };
+
+            // --- Section 01: Credentials ---
+            Label lblSec1 = new Label();
+            lblSec1.Text = "01 • CREDENTIALS";
+            lblSec1.Font = new Font("Segoe UI", 8f, FontStyle.Bold);
+            lblSec1.ForeColor = ColMuted;
+            lblSec1.Location = new Point(36, pnlHeader.Bottom + 22);
+            lblSec1.AutoSize = true;
+            this.Controls.Add(lblSec1);
+
+            Panel pnlCard = new Panel();
+            pnlCard.Location = new Point(36, lblSec1.Bottom + 8);
+            pnlCard.Size = new Size(468, 168);
+            pnlCard.BackColor = ColSurface;
+            pnlCard.Paint += (s, e) => {
+                e.Graphics.DrawRectangle(new Pen(ColBorder, 1), 0, 0, 467, 167);
+            };
+            this.Controls.Add(pnlCard);
 
             Label lblUser = new Label();
-            lblUser.Text = "Username / Mobile Number:";
-            lblUser.Location = new Point(25, 85);
+            lblUser.Text = "MOBILE NUMBER (USERNAME)";
+            lblUser.Font = new Font("Segoe UI", 7.5f, FontStyle.Bold);
+            lblUser.ForeColor = ColMuted;
+            lblUser.Location = new Point(18, 16);
             lblUser.AutoSize = true;
-            this.Controls.Add(lblUser);
+            pnlCard.Controls.Add(lblUser);
 
             txtUser = new TextBox();
-            txtUser.Location = new Point(27, 108);
-            txtUser.Size = new Size(390, 26);
-            txtUser.BackColor = Color.FromArgb(30, 41, 59);
-            txtUser.ForeColor = Color.White;
-            this.Controls.Add(txtUser);
+            txtUser.Location = new Point(18, 38);
+            txtUser.Size = new Size(432, 28);
+            txtUser.BackColor = ColInputBg;
+            txtUser.ForeColor = ColText;
+            txtUser.BorderStyle = BorderStyle.FixedSingle;
+            txtUser.Font = new Font("Segoe UI", 11f);
+            txtUser.MaxLength = 10;
+            txtUser.KeyPress += (s, e) => {
+                // Strict numerical input filter
+                if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
+                {
+                    e.Handled = true;
+                }
+            };
+            pnlCard.Controls.Add(txtUser);
 
             Label lblPass = new Label();
-            lblPass.Text = "Wi-Fi Password:";
-            lblPass.Location = new Point(25, 145);
+            lblPass.Text = "WI-FI PASSWORD";
+            lblPass.Font = new Font("Segoe UI", 7.5f, FontStyle.Bold);
+            lblPass.ForeColor = ColMuted;
+            lblPass.Location = new Point(18, 86);
             lblPass.AutoSize = true;
-            this.Controls.Add(lblPass);
+            pnlCard.Controls.Add(lblPass);
 
             txtPass = new TextBox();
             txtPass.PasswordChar = '●';
-            txtPass.Location = new Point(27, 168);
-            txtPass.Size = new Size(390, 26);
-            txtPass.BackColor = Color.FromArgb(30, 41, 59);
-            txtPass.ForeColor = Color.White;
-            this.Controls.Add(txtPass);
+            txtPass.Location = new Point(18, 108);
+            txtPass.Size = new Size(432, 28);
+            txtPass.BackColor = ColInputBg;
+            txtPass.ForeColor = ColText;
+            txtPass.BorderStyle = BorderStyle.FixedSingle;
+            txtPass.Font = new Font("Segoe UI", 11f);
+            pnlCard.Controls.Add(txtPass);
+
+            // --- Section 02: Actions ---
+            Label lblSec2 = new Label();
+            lblSec2.Text = "02 • SETUP & CONTROLS";
+            lblSec2.Font = new Font("Segoe UI", 8f, FontStyle.Bold);
+            lblSec2.ForeColor = ColMuted;
+            lblSec2.Location = new Point(36, 316);
+            lblSec2.AutoSize = true;
+            this.Controls.Add(lblSec2);
 
             btnRegister = new Button();
             btnRegister.Text = "Register Auto-Login";
-            btnRegister.Location = new Point(27, 215);
-            btnRegister.Size = new Size(185, 40);
-            btnRegister.BackColor = Color.FromArgb(2, 132, 199);
+            btnRegister.Location = new Point(36, 340);
+            btnRegister.Size = new Size(468, 48);
+            btnRegister.BackColor = ColAccent;
             btnRegister.ForeColor = Color.White;
             btnRegister.FlatStyle = FlatStyle.Flat;
-            btnRegister.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            btnRegister.FlatAppearance.BorderSize = 0;
+            btnRegister.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
+            btnRegister.Cursor = Cursors.Hand;
             btnRegister.Click += BtnRegister_Click;
             this.Controls.Add(btnRegister);
 
-            btnDeregister = new Button();
-            btnDeregister.Text = "Deregister";
-            btnDeregister.Location = new Point(232, 215);
-            btnDeregister.Size = new Size(185, 40);
-            btnDeregister.BackColor = Color.FromArgb(71, 85, 105);
-            btnDeregister.ForeColor = Color.White;
-            btnDeregister.FlatStyle = FlatStyle.Flat;
-            btnDeregister.Click += BtnDeregister_Click;
-            this.Controls.Add(btnDeregister);
-
             btnTestLogin = new Button();
-            btnTestLogin.Text = "Test Login Now";
-            btnTestLogin.Location = new Point(27, 265);
-            btnTestLogin.Size = new Size(390, 30);
-            btnTestLogin.BackColor = Color.FromArgb(30, 41, 59);
+            btnTestLogin.Text = "Test Connection";
+            btnTestLogin.Location = new Point(36, 402);
+            btnTestLogin.Size = new Size(226, 42);
+            btnTestLogin.BackColor = ColSurface;
+            btnTestLogin.ForeColor = ColText;
             btnTestLogin.FlatStyle = FlatStyle.Flat;
+            btnTestLogin.FlatAppearance.BorderColor = ColBorder;
+            btnTestLogin.Font = new Font("Segoe UI", 9.5f);
+            btnTestLogin.Cursor = Cursors.Hand;
             btnTestLogin.Click += BtnTestLogin_Click;
             this.Controls.Add(btnTestLogin);
 
+            btnDeregister = new Button();
+            btnDeregister.Text = "Deregister";
+            btnDeregister.Location = new Point(278, 402);
+            btnDeregister.Size = new Size(226, 42);
+            btnDeregister.BackColor = ColSurface;
+            btnDeregister.ForeColor = ColMuted;
+            btnDeregister.FlatStyle = FlatStyle.Flat;
+            btnDeregister.FlatAppearance.BorderColor = ColBorder;
+            btnDeregister.Font = new Font("Segoe UI", 9.5f);
+            btnDeregister.Cursor = Cursors.Hand;
+            btnDeregister.Click += BtnDeregister_Click;
+            this.Controls.Add(btnDeregister);
+
+            // --- Status and Feedback ---
             lblStatus = new Label();
-            lblStatus.Location = new Point(27, 305);
-            lblStatus.Size = new Size(390, 22);
+            lblStatus.Location = new Point(36, 466);
+            lblStatus.Size = new Size(468, 48);
             lblStatus.TextAlign = ContentAlignment.MiddleCenter;
-            lblStatus.ForeColor = Color.FromArgb(52, 211, 153);
+            lblStatus.ForeColor = ColMuted;
+            lblStatus.Font = new Font("Segoe UI", 9.5f);
             this.Controls.Add(lblStatus);
+
+            // Footer note
+            Label lblFooter = new Label();
+            lblFooter.Text = "100% Client-Side & Local • Zero Admin Rights • Open Source";
+            lblFooter.Location = new Point(36, 595);
+            lblFooter.Size = new Size(468, 24);
+            lblFooter.TextAlign = ContentAlignment.MiddleCenter;
+            lblFooter.ForeColor = Color.FromArgb(90, 86, 80);
+            lblFooter.Font = new Font("Segoe UI", 8.25f);
+            this.Controls.Add(lblFooter);
 
             LoadSavedData();
         }
 
         void LoadSavedData()
         {
+            string u, p;
+            bool hasCreds = Program.LoadCredentials(out u, out p);
+
             if (Program.IsAutoStartRegistered())
             {
-                lblStatus.Text = "Status: Active & Registered on this PC";
-                lblStatus.ForeColor = Color.FromArgb(52, 211, 153);
+                lblStatus.Text = "✓ Auto-login active and registered on this PC.";
+                lblStatus.ForeColor = ColGreen;
+                lblPill.Text = "● ACTIVE";
+                lblPill.ForeColor = ColGreen;
+                lblPill.BackColor = ColGreenBg;
             }
             else
             {
-                lblStatus.Text = "Status: Not registered for auto-login";
-                lblStatus.ForeColor = Color.FromArgb(148, 163, 184);
+                lblStatus.Text = "Not registered. Enter credentials and click Register.";
+                lblStatus.ForeColor = ColMuted;
+                lblPill.Text = "○ IDLE";
+                lblPill.ForeColor = ColMuted;
+                lblPill.BackColor = Color.FromArgb(35, 33, 30);
             }
 
-            string u, p;
-            if (Program.LoadCredentials(out u, out p))
+            // Auto-fill saved credentials if available
+            if (hasCreds)
             {
                 txtUser.Text = u;
                 txtPass.Text = p;
+            }
+            else
+            {
+                txtUser.Text = "";
+                txtPass.Text = "";
             }
         }
 
@@ -416,7 +593,7 @@ namespace CurajConnect
             string pass = txtPass.Text;
             if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass))
             {
-                MessageBox.Show("Please enter both Username and Password.", "Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please enter both Mobile Number and Wi-Fi Password.", "Credentials Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -438,22 +615,33 @@ namespace CurajConnect
             if (ok)
             {
                 Program.StartBackgroundWatch(targetExe);
-                lblStatus.Text = "Status: Active & Registered!";
-                lblStatus.ForeColor = Color.FromArgb(52, 211, 153);
-                MessageBox.Show("Auto-Login is now registered!\n\nIt will silently keep you logged into CURAJ Wi-Fi whenever your PC is on.", "Registered Successfully", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                lblStatus.Text = "✓ Registered successfully! Silent watchdog is active.";
+                lblStatus.ForeColor = ColGreen;
+                lblPill.Text = "● ACTIVE";
+                lblPill.ForeColor = ColGreen;
+                lblPill.BackColor = ColGreenBg;
+                MessageBox.Show("Auto-Login is now active!\n\nYour PC will now automatically authenticate to 'CURAJ CAMPUS CONNECT' whenever you connect.", "Campus Connect", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
-                MessageBox.Show("Could not set startup registry key.", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Could not save auto-login registry setting.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         void BtnDeregister_Click(object sender, EventArgs e)
         {
             bool ok = Program.UnregisterAutoStart();
-            lblStatus.Text = "Status: Deregistered (Disabled)";
-            lblStatus.ForeColor = Color.FromArgb(239, 68, 68);
-            MessageBox.Show("Auto-Login has been completely removed and stopped.", "Deregistered", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            // Clear input fields immediately upon deregistration
+            txtUser.Text = "";
+            txtPass.Text = "";
+
+            lblStatus.Text = "Auto-login deregistered & credentials deleted.";
+            lblStatus.ForeColor = ColRed;
+            lblPill.Text = "○ IDLE";
+            lblPill.ForeColor = ColMuted;
+            lblPill.BackColor = Color.FromArgb(35, 33, 30);
+            MessageBox.Show("Campus Connect has been completely deregistered.\n\nSaved credentials and startup tasks have been deleted.", "Deregistered", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         void BtnTestLogin_Click(object sender, EventArgs e)
@@ -466,22 +654,22 @@ namespace CurajConnect
                 return;
             }
 
-            lblStatus.Text = "Testing connection...";
-            lblStatus.ForeColor = Color.FromArgb(56, 189, 248);
+            lblStatus.Text = "Connecting to university gateway (122.252.242.93)...";
+            lblStatus.ForeColor = ColAccent;
             Application.DoEvents();
 
             string res = Program.PerformLogin(user, pass);
             if (res == "SUCCESS")
             {
-                lblStatus.Text = "Login successful! Internet active.";
-                lblStatus.ForeColor = Color.FromArgb(52, 211, 153);
-                MessageBox.Show("Login successful! You are now connected to the internet.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                lblStatus.Text = "✓ Login successful! Campus internet active.";
+                lblStatus.ForeColor = ColGreen;
+                MessageBox.Show("Login successful! You are connected to campus internet.", "Connected", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
-                lblStatus.Text = "Login failed: " + res;
-                lblStatus.ForeColor = Color.FromArgb(239, 68, 68);
-                MessageBox.Show("Login response: " + res, "Result", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                lblStatus.Text = "Gateway response: " + res;
+                lblStatus.ForeColor = ColRed;
+                MessageBox.Show("Gateway response: " + res, "Gateway Status", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
     }

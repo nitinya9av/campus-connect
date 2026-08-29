@@ -33,7 +33,7 @@ curaj-wifi/
 ├── app.js                <- Theme toggle & client-side file generators
 ├── windows/
 │   ├── README.md         <- Windows build & command-line usage guide
-│   ├── CurajConnect.cs   <- 100% auditable C# source code
+│   ├── campus-connect.cs <- 100% auditable C# source code
 │   └── curaj_connect.exe <- Pre-compiled 15 KB native executable
 ├── android/
 │   ├── README.md         <- MacroDroid setup guide (Randomized MAC)
@@ -59,7 +59,7 @@ Located in [`windows/curaj_connect.exe`](windows/curaj_connect.exe):
   ```
 - **Compile from Source**: Can be recompiled anytime using Windows' built-in C# compiler (`csc.exe`):
   ```powershell
-  & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /out:curaj_connect.exe CurajConnect.cs
+  & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32manifest:windows\app.manifest /out:curaj_connect.exe campus-connect.cs
   ```
 
 ---
