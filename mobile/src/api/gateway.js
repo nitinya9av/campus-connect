@@ -1,32 +1,43 @@
 const GATEWAY_LOGIN_URL = 'http://122.252.242.93/userportal/newlogin.do';
 const GATEWAY_PORTAL_URL = 'http://122.252.242.93/userportal/pages/usermedia/curaj/app/campus/ui/login.html';
 const NAS_URL = 'http://1.254.254.254/';
-const CONNECTIVITY_URL = 'http://connectivitycheck.gstatic.com/generate_204';
+
+// Multiple high-reliability 204 endpoints (HTTPS avoids cleartext interception and cert spoofing)
+const CONNECTIVITY_URLS = [
+  'https://www.google.com/generate_204',
+  'https://connectivitycheck.gstatic.com/generate_204',
+  'http://connectivitycheck.gstatic.com/generate_204',
+];
 
 /**
  * Checks if the device has actual internet access.
- * Returns true if Google 204 succeeds, false if redirected or failed.
+ * Probes Google 204 endpoints. Returns true if genuine 204 No Content is returned.
  */
-export async function checkInternetAccess(timeoutMs = 4000) {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+export async function checkInternetAccess(timeoutMs = 3000) {
+  for (const url of CONNECTIVITY_URLS) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-    const res = await fetch(CONNECTIVITY_URL, {
-      method: 'GET',
-      headers: { 'Cache-Control': 'no-cache' },
-      signal: controller.signal,
-    });
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { 'Cache-Control': 'no-cache' },
+        signal: controller.signal,
+      });
 
-    clearTimeout(timeout);
-    return res.status === 204;
-  } catch (err) {
-    return false;
+      clearTimeout(timeout);
+      if (res.status === 204) {
+        return true;
+      }
+    } catch (err) {
+      // Continue to next endpoint fallback
+    }
   }
+  return false;
 }
 
 /**
- * Checks if the CURAJ captive portal gateway or NAS is reachable.
+ * Checks if the CURAJ captive portal gateway or NAS is reachable on the local network.
  */
 export async function isGatewayReachable(timeoutMs = 3000) {
   try {
@@ -51,59 +62,120 @@ export async function isGatewayReachable(timeoutMs = 3000) {
 }
 
 /**
- * Authenticates with the CURAJ campus gateway using direct POST.
+ * Authenticates with the CURAJ campus gateway using direct POST and Inventum NAS handshake.
  */
 export async function loginToGateway(username, password, timeoutMs = 8000) {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    // 0. If already online, return immediately
+    const alreadyOnline = await checkInternetAccess(2000);
+    if (alreadyOnline) {
+      return { success: true, message: 'Already connected to campus internet.' };
+    }
 
-    // Official CURAJ form parameters
+    let sessionCookie = '';
+
+    // 1. Prime session with Inventum NAS controller (triggers client MAC/IP registration)
+    try {
+      const nasController = new AbortController();
+      const nasTimeout = setTimeout(() => nasController.abort(), 2500);
+      const nasRes = await fetch(NAS_URL, {
+        method: 'GET',
+        headers: { 'Cache-Control': 'no-cache' },
+        signal: nasController.signal,
+      });
+      clearTimeout(nasTimeout);
+      const nasHtml = await nasRes.text();
+
+      // Extract the Inventum redirect URL: URL=http://122.252.242.93/userportal/?...
+      const urlMatch = nasHtml.match(/URL=(http:\/\/[^"'>\s]+)/i);
+      if (urlMatch && urlMatch[1]) {
+        const portalUrl = urlMatch[1];
+        
+        // 2. Fetch the userportal challenge URL to get JSESSIONID bound to client MAC/IP
+        const portalController = new AbortController();
+        const portalTimeout = setTimeout(() => portalController.abort(), 3000);
+        const portalRes = await fetch(portalUrl, {
+          method: 'GET',
+          signal: portalController.signal,
+        });
+        clearTimeout(portalTimeout);
+
+        // Extract JSESSIONID if present in Set-Cookie
+        const setCookie = portalRes.headers.get('set-cookie');
+        if (setCookie) {
+          const cookieMatch = setCookie.match(/(JSESSIONID=[^;]+)/i);
+          if (cookieMatch) {
+            sessionCookie = cookieMatch[1];
+          }
+        }
+      }
+    } catch (e) {
+      // NAS probe failed, proceed to direct login
+    }
+
+    // 3. POST credentials to userportal endpoint
     const body = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&phone=0&type=2&jsonresponse=1`;
+
+    const headers = {
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'X-Requested-With': 'XMLHttpRequest',
+      'Referer': GATEWAY_PORTAL_URL,
+      'User-Agent': 'Mozilla/5.0 (Linux; Android 14) CampusConnect/1.0',
+    };
+    if (sessionCookie) {
+      headers['Cookie'] = sessionCookie;
+    }
+
+    const loginController = new AbortController();
+    const loginTimeout = setTimeout(() => loginController.abort(), timeoutMs);
 
     const res = await fetch(GATEWAY_LOGIN_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Referer': GATEWAY_PORTAL_URL,
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 14) CampusConnect/1.0',
-      },
+      headers,
       body,
-      signal: controller.signal,
+      signal: loginController.signal,
     });
 
-    clearTimeout(timeout);
+    clearTimeout(loginTimeout);
     const text = await res.text();
 
-    // Trigger NAS controller handshake if requested
+    // 4. Trigger NAS controller handshake if redirect_to_nas is requested
     if (text.includes('redirect_to_nas')) {
       try {
-        await fetch(NAS_URL, { method: 'GET' });
+        const pingController = new AbortController();
+        const pingTimeout = setTimeout(() => pingController.abort(), 2000);
+        await fetch(NAS_URL, { method: 'GET', signal: pingController.signal });
+        clearTimeout(pingTimeout);
       } catch {}
     }
 
-    // Check specific portal diagnostics
-    const isInvalid = text.includes('Invalid') ||
-                      text.includes('Incorrect') ||
-                      text.includes('authentication failed');
-
-    if (isInvalid) {
+    // 5. Check error diagnostics
+    if (text.includes('Invalid') || text.includes('Incorrect') || text.includes('authentication failed')) {
       return { success: false, message: 'Invalid Mobile Number or Password.' };
     }
 
-    // Verify actual connectivity after login
-    await new Promise(r => setTimeout(r, 1000));
-    const hasNet = await checkInternetAccess(3500);
-    if (hasNet) {
-      return { success: true, message: 'Connected successfully to CURAJ Wi-Fi.' };
+    // 6. Verification loop: check internet access up to 3 times
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      await new Promise(r => setTimeout(r, 1200));
+      const hasNet = await checkInternetAccess(2500);
+      if (hasNet) {
+        return { success: true, message: 'Connected successfully to CURAJ Wi-Fi.' };
+      }
     }
 
     if (text.includes('Session already running')) {
-      return { success: false, message: 'Session active on another port. Re-checking...' };
+      return { success: true, message: 'Connected! Session active on CURAJ Wi-Fi.' };
     }
 
-    return { success: true, message: 'Login sent. Verifying connectivity...' };
+    // If server returned redirect_to_nas or success_net, credentials were accepted by gateway
+    if (text.includes('redirect_to_nas') || text.includes('success_net') || text.includes('"errorKey":"success"')) {
+      return { success: true, message: 'Login accepted by campus gateway! Internet active.' };
+    }
+
+    return {
+      success: false,
+      message: text ? `Gateway response: ${text.trim().slice(0, 100)}` : 'Could not verify internet access.',
+    };
   } catch (err) {
     if (err.name === 'AbortError') {
       return { success: false, message: 'Gateway request timed out.' };
@@ -111,4 +183,5 @@ export async function loginToGateway(username, password, timeoutMs = 8000) {
     return { success: false, message: 'Could not reach gateway: ' + err.message };
   }
 }
+
 

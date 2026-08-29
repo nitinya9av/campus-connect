@@ -32,12 +32,28 @@ function CampusConnectMain() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [networkState, setNetworkState] = useState('checking'); // 'online', 'login_needed', 'offline', 'checking'
   const [statusMessage, setStatusMessage] = useState({
     type: 'neutral', // 'success', 'error', 'neutral'
-    text: 'Enter your credentials to configure automatic Wi-Fi login.',
+    text: 'Checking campus network connectivity...',
   });
 
-  // Load saved credentials on startup
+  const refreshNetwork = useCallback(async () => {
+    const hasNet = await checkInternetAccess(2500);
+    if (hasNet) {
+      setNetworkState('online');
+      return;
+    }
+
+    const reachable = await isGatewayReachable(2000);
+    if (reachable) {
+      setNetworkState('login_needed');
+    } else {
+      setNetworkState('offline');
+    }
+  }, []);
+
+  // Load saved credentials on startup & run initial connectivity probe
   useEffect(() => {
     (async () => {
       const creds = await getCredentials();
@@ -45,13 +61,20 @@ function CampusConnectMain() {
         setUsername(creds.username);
         setPassword(creds.password);
         setIsRegistered(true);
-        setStatusMessage({
-          type: 'success',
-          text: '✓ Auto-login configured and saved on this device.',
-        });
       }
+      await refreshNetwork();
     })();
-  }, []);
+  }, [refreshNetwork]);
+
+  // Periodic network health check every 4 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (!isLoading) {
+        refreshNetwork();
+      }
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [refreshNetwork, isLoading]);
 
   // Handle number input (strict 10 digits filter)
   const handleUsernameChange = (val) => {
@@ -71,7 +94,7 @@ function CampusConnectMain() {
     }
 
     setIsLoading(true);
-    setStatusMessage({ type: 'neutral', text: 'Connecting to CURAJ gateway...' });
+    setStatusMessage({ type: 'neutral', text: 'Authenticating with CURAJ gateway...' });
 
     // Save locally
     await saveCredentials(username, password);
@@ -82,14 +105,16 @@ function CampusConnectMain() {
     setIsLoading(false);
 
     if (res.success) {
+      setNetworkState('online');
       setStatusMessage({
         type: 'success',
         text: '✓ ' + res.message,
       });
     } else {
+      await refreshNetwork();
       setStatusMessage({
         type: 'error',
-        text: '⚠ Saved, but gateway returned: ' + res.message,
+        text: '⚠ ' + res.message,
       });
     }
   };
@@ -102,27 +127,19 @@ function CampusConnectMain() {
     }
 
     setIsLoading(true);
-    setStatusMessage({ type: 'neutral', text: 'Testing connection to CURAJ gateway...' });
-
-    const hasInternet = await checkInternetAccess(3000);
-    if (hasInternet) {
-      setIsLoading(false);
-      setStatusMessage({
-        type: 'success',
-        text: '✓ Internet access is active and working.',
-      });
-      return;
-    }
+    setStatusMessage({ type: 'neutral', text: 'Connecting to CURAJ gateway...' });
 
     const res = await loginToGateway(username, password);
     setIsLoading(false);
 
     if (res.success) {
+      setNetworkState('online');
       setStatusMessage({
         type: 'success',
         text: '✓ ' + res.message,
       });
     } else {
+      await refreshNetwork();
       setStatusMessage({
         type: 'error',
         text: '✕ ' + res.message,
@@ -183,16 +200,36 @@ function CampusConnectMain() {
         <View
           style={[
             styles.statusPill,
-            isRegistered ? styles.statusPillActive : styles.statusPillIdle,
+            isLoading
+              ? styles.statusPillConnecting
+              : networkState === 'online'
+              ? styles.statusPillOnline
+              : networkState === 'login_needed'
+              ? styles.statusPillLoginNeeded
+              : styles.statusPillOffline,
           ]}
         >
           <Text
             style={[
               styles.statusPillText,
-              isRegistered ? styles.statusPillTextActive : styles.statusPillTextIdle,
+              isLoading
+                ? styles.statusPillTextConnecting
+                : networkState === 'online'
+                ? styles.statusPillTextOnline
+                : networkState === 'login_needed'
+                ? styles.statusPillTextLoginNeeded
+                : styles.statusPillTextOffline,
             ]}
           >
-            {isLoading ? '● CONNECTING' : isRegistered ? '● ACTIVE' : '○ IDLE'}
+            {isLoading
+              ? '⚡ CONNECTING'
+              : networkState === 'online'
+              ? '● ONLINE'
+              : networkState === 'login_needed'
+              ? '● LOGIN NEEDED'
+              : networkState === 'offline'
+              ? '○ NO WI-FI'
+              : '○ CHECKING'}
           </Text>
         </View>
       </View>
@@ -385,12 +422,22 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     flexShrink: 0,
   },
-  statusPillActive: {
+  statusPillOnline: {
     backgroundColor: colors.greenBg,
     borderWidth: 1,
     borderColor: colors.greenBorder,
   },
-  statusPillIdle: {
+  statusPillLoginNeeded: {
+    backgroundColor: '#3d1c14',
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  statusPillConnecting: {
+    backgroundColor: '#2b221a',
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  statusPillOffline: {
     backgroundColor: colors.surfaceHover,
     borderWidth: 1,
     borderColor: colors.border,
@@ -400,10 +447,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  statusPillTextActive: {
+  statusPillTextOnline: {
     color: colors.green,
   },
-  statusPillTextIdle: {
+  statusPillTextLoginNeeded: {
+    color: '#ffffff',
+  },
+  statusPillTextConnecting: {
+    color: colors.accent,
+  },
+  statusPillTextOffline: {
     color: colors.muted,
   },
   container: {

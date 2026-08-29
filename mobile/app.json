@@ -17,6 +17,7 @@
     },
     "android": {
       "package": "com.niitnydv.campusconnect",
+      "usesCleartextTraffic": true,
       "permissions": [
         "ACCESS_NETWORK_STATE",
         "ACCESS_WIFI_STATE",
