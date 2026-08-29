@@ -13,7 +13,7 @@ The root portal is built with a minimalist, warm editorial aesthetic featuring:
 
 ### Features
 1. **Windows (PC / Laptop)**:
-   - **Native 1-Click Portable App (`curaj_connect.exe`)**: 15 KB standalone native Windows executable with dark GUI. Enter credentials once and click Register.
+   - **Native 1-Click Portable App (`campus-connect.exe`)**: 15 KB standalone native Windows executable with dark GUI. Enter credentials once and click Register.
    - **Zero Administrator Rights**: Runs in standard user space, creates startup entry in `HKCU\...\Run`, and stores settings locally in `%APPDATA%\CURAJ_Connect`.
    - **1-Click Deregistration**: Open the app anytime and click Deregister to clean up all background entries.
 2. **Android (Phone / Tablet)**:
@@ -34,7 +34,7 @@ curaj-wifi/
 ├── windows/
 │   ├── README.md         <- Windows build & command-line usage guide
 │   ├── campus-connect.cs <- 100% auditable C# source code
-│   └── curaj_connect.exe <- Pre-compiled 15 KB native executable
+│   └── app.manifest      <- Per-Monitor V2 High-DPI manifest
 ├── android/
 │   ├── README.md         <- MacroDroid setup guide (Randomized MAC)
 │   ├── CURAJ_AutoLogin.macro <- Universal macro template
@@ -46,20 +46,20 @@ curaj-wifi/
 
 ---
 
-## Standalone Windows App (`curaj_connect.exe`)
+## Standalone Windows App (`campus-connect.exe`)
 
-Located in [`windows/curaj_connect.exe`](windows/curaj_connect.exe):
+Downloadable directly from [GitHub Releases](https://github.com/nitinya9av/campus-connect/releases/latest):
 - **GUI Mode**: Double-click to open a clean dialog to enter credentials, click `Register Auto-Login`, or `Deregister`.
 - **CLI Flags**:
   ```powershell
-  curaj_connect.exe --register <username> <password>
-  curaj_connect.exe --unregister
-  curaj_connect.exe --login
-  curaj_connect.exe --watch
+  campus-connect.exe --register <username> <password>
+  campus-connect.exe --unregister
+  campus-connect.exe --login
+  campus-connect.exe --watch
   ```
 - **Compile from Source**: Can be recompiled anytime using Windows' built-in C# compiler (`csc.exe`):
   ```powershell
-  & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32manifest:windows\app.manifest /out:curaj_connect.exe campus-connect.cs
+  & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32manifest:windows\app.manifest /out:campus-connect.exe campus-connect.cs
   ```
 
 ---

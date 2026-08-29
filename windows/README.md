@@ -19,7 +19,7 @@ No Visual Studio or heavy SDK required! Windows includes the Microsoft C# compil
 
 Run in PowerShell:
 ```powershell
-& "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32manifest:app.manifest /out:curaj_connect.exe campus-connect.cs
+& "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32manifest:app.manifest /out:campus-connect.exe campus-connect.cs
 ```
 
 ---
@@ -28,8 +28,8 @@ Run in PowerShell:
 
 | Command | Action |
 | :--- | :--- |
-| `curaj_connect.exe` | Launches the graphical user interface (GUI). |
-| `curaj_connect.exe --register <user> <pass>` | Registers auto-start and saves credentials. |
-| `curaj_connect.exe --unregister` | Stops background monitor and removes auto-start. |
-| `curaj_connect.exe --login` | Tests immediate login. |
-| `curaj_connect.exe --watch` | Silent background loop (used by auto-start). |
+| `campus-connect.exe` | Launches the graphical user interface (GUI). |
+| `campus-connect.exe --register <user> <pass>` | Registers auto-start and saves credentials. |
+| `campus-connect.exe --unregister` | Stops background monitor and removes auto-start. |
+| `campus-connect.exe --login` | Tests immediate login. |
+| `campus-connect.exe --watch` | Silent background loop (used by auto-start). |

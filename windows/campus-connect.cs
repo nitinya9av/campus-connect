@@ -223,11 +223,15 @@ namespace CurajConnect
             try
             {
                 Process current = Process.GetCurrentProcess();
-                foreach (Process p in Process.GetProcessesByName("curaj_connect"))
+                string[] procNames = new string[] { "campus-connect", "curaj_connect" };
+                foreach (string name in procNames)
                 {
-                    if (p.Id != current.Id)
+                    foreach (Process p in Process.GetProcessesByName(name))
                     {
-                        try { p.Kill(); } catch { }
+                        if (p.Id != current.Id)
+                        {
+                            try { p.Kill(); } catch { }
+                        }
                     }
                 }
             }
@@ -598,7 +602,7 @@ namespace CurajConnect
             }
 
             string dir = Program.GetConfigDir();
-            string targetExe = Path.Combine(dir, "curaj_connect.exe");
+            string targetExe = Path.Combine(dir, "campus-connect.exe");
 
             try
             {

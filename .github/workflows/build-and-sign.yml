@@ -26,12 +26,12 @@ jobs:
 
       - name: Compile Native C# Client
         run: |
-          & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32manifest:windows\app.manifest /out:windows\curaj_connect.exe windows\campus-connect.cs
+          & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32manifest:windows\app.manifest /out:windows\campus-connect.exe windows\campus-connect.cs
 
       - name: Prepare Artifact for SignPath
         if: env.SIGNPATH_API_TOKEN != ''
         run: |
-          Compress-Archive -Path windows\curaj_connect.exe -DestinationPath unsigned-app.zip
+          Compress-Archive -Path windows\campus-connect.exe -DestinationPath unsigned-app.zip
 
       - name: Submit Signing Request to SignPath Foundation
         if: env.SIGNPATH_API_TOKEN != ''
@@ -58,6 +58,6 @@ jobs:
           name: ${{ startsWith(github.ref, 'refs/tags/') && format('Campus Connect {0}', github.ref_name) || 'Campus Connect (Latest)' }}
           draft: false
           prerelease: false
-          files: windows/curaj_connect.exe
+          files: windows/campus-connect.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
