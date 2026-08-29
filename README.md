@@ -13,14 +13,14 @@ The root portal is built with a minimalist, warm editorial aesthetic featuring:
 
 ### Features
 1. **Windows (PC / Laptop)**:
-   - **Personalized 1-Click Setup (`.bat`)**: Generates a customized installer that registers a silent background keep-alive loop in user startup.
-   - **Clean 1-Click Deregister**: No desktop clutter; users can download the deregister script anytime directly from the portal to completely clean up.
-   - **Portable App (`curaj_connect.exe`)**: 15 KB standalone native Windows app with a dark-mode GUI.
+   - **Native 1-Click Portable App (`curaj_connect.exe`)**: 15 KB standalone native Windows executable with dark GUI. Enter credentials once and click Register.
+   - **Zero Administrator Rights**: Runs in standard user space, creates startup entry in `HKCU\...\Run`, and stores settings locally in `%APPDATA%\CURAJ_Connect`.
+   - **1-Click Deregistration**: Open the app anytime and click Deregister to clean up all background entries.
 2. **Android (Phone / Tablet)**:
    - **Dedicated Lightweight App (Coming Soon)**: Under construction. Simply install and enter credentials once to connect forever; uninstalling immediately deregisters.
 3. **Privacy & Security**:
-   - **100% Client-Side**: Credentials are processed entirely in the user's browser; nothing is sent to any external server.
-   - **User-Space Only**: Runs without administrator privileges.
+   - **100% Client-Side**: No backend, no telemetry. Passwords are saved strictly on your local PC.
+   - **Direct Gateway**: All requests go directly to the campus portal (`122.252.242.93`).
 
 ---
 

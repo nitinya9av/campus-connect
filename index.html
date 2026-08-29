@@ -59,62 +59,44 @@
             Client-side, zero admin required, and reversible in one click.
           </p>
         </div>
-      </section>
-
-      <!-- WINDOWS SECTION                                -->
+      </section>      <!-- WINDOWS SECTION -->
       <div id="panel-windows" class="tab-panel active">
         <section class="content-section">
-          <h2 class="section-label">01 &middot; Credentials</h2>
-          <p style="color: var(--muted); font-size: 0.88rem;">
-            Your credentials remain in your browser session to generate your installer and are saved strictly on your
-            local PC.
+          <h2 class="section-label">Windows &middot; 1-Click Portable App</h2>
+          <p style="color: var(--foreground); font-size: 1.1rem; font-family: var(--font-serif); font-weight: 500; margin-bottom: 0.4rem;">
+            Native, lightweight auto-login client for Windows.
+          </p>
+          <p style="color: var(--muted); font-size: 0.9rem; line-height: 1.65; max-width: 50ch; margin-bottom: 1.5rem;">
+            A single, standalone portable application. Download, enter your credentials once, and click Register. It runs silently in the background whenever connected to CURAJ Wi-Fi.
           </p>
 
-          <div class="minimal-form">
-            <div class="form-row">
-              <label for="winUser">Mobile Number / Username</label>
-              <input type="text" id="winUser" placeholder="e.g. 4780200489" maxlength="10" inputmode="numeric"
-                pattern="[0-9]*" autocomplete="username">
-            </div>
-            <div class="form-row">
-              <label for="winPass">Wi-Fi Password</label>
-              <input type="password" id="winPass" placeholder="Enter Wi-Fi password" autocomplete="current-password">
-            </div>
-          </div>
-
-          <h2 class="section-label" style="margin-top: 2rem;">02 &middot; 1-Click Setup</h2>
-          <p style="color: var(--muted); font-size: 0.88rem;">
-            Choose your preferred method. Both run in user space without requiring administrator privileges:
-          </p>
-
-          <div class="btn-row">
-            <button id="winDownloadBtn" class="btn btn-primary" onclick="downloadPersonalizedWindowsBat()" disabled>
-              Download 1-Click Setup (.bat)
-            </button>
-            <a href="windows/curaj_connect.exe" download="curaj_connect.exe" class="btn btn-outline ext">
-              Portable App (.exe)
+          <div style="margin-bottom: 1.75rem;">
+            <a href="windows/curaj_connect.exe" download="curaj_connect.exe" class="btn btn-primary" style="padding: 0.75rem 1.65rem; font-size: 0.9rem;">
+              Download Windows App (.exe)
             </a>
-          </div>
-
-          <div class="notice-note" style="margin-top: 1.15rem;">
-            <strong>Windows Note:</strong> If your browser prompts to verify the download, click <em>Keep</em>. If
-            Windows SmartScreen shows <em>"Windows protected your PC"</em>, click <u>More info</u> &rarr; <strong>Run
-              anyway</strong>. The script is 100% open source and safe.
-          </div>
-
-          <!-- Deregister Option -->
-          <div style="margin-top: 2rem; padding-top: 1.25rem; border-top: 1px dashed var(--border);">
-            <div
-              style="display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
-              <div>
-                <span class="section-label" style="display: block; margin-bottom: 0.2rem;">Want to turn it off?</span>
-                <span style="font-size: 0.84rem; color: var(--muted);">Completely clean up startup entries and local
-                  config anytime.</span>
-              </div>
-              <button class="btn btn-danger" onclick="downloadDeregisterBat()">
-                Download Deregister Script (.bat)
-              </button>
+            <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--faint); margin-top: 0.5rem;">
+              v1.0 &middot; 15 KB &middot; Standalone Binary &middot; Zero Admin Required
             </div>
+          </div>
+
+          <h2 class="section-label" style="margin-top: 2rem;">Setup Guide</h2>
+          <ul class="step-list">
+            <li>
+              <span class="num">01</span>
+              <span class="desc">Download and double-click <code>curaj_connect.exe</code>.</span>
+            </li>
+            <li>
+              <span class="num">02</span>
+              <span class="desc">Enter your Mobile Number (Username) and Password, then click <strong>Register Auto-Login</strong>.</span>
+            </li>
+            <li>
+              <span class="num">03</span>
+              <span class="desc">Done! Your PC will now keep you authenticated automatically on startup. To turn it off anytime, open the app and click <strong>Deregister</strong>.</span>
+            </li>
+          </ul>
+
+          <div class="notice-note">
+            <strong>100% Portable & Safe:</strong> No installer or admin elevation required. Stores your credentials strictly on your machine in <code>%APPDATA%\CURAJ_Connect</code> and communicates directly with the campus gateway.
           </div>
         </section>
       </div>
@@ -140,118 +122,27 @@
         </section>
       </div>
 
-      <!-- SECURITY & OPEN SOURCE GUARANTEE               -->
+      <!-- SECURITY & OPEN SOURCE GUARANTEE -->
       <section id="security" class="content-section">
         <h2 class="section-label">Security &middot; Transparency</h2>
         <ul class="guarantee-list">
           <li>
-            <span><strong>Zero Data Collection:</strong> Executed 100% client-side in your browser. Passwords are never
-              sent to or logged on any server.</span>
+            <span><strong>Zero Data Collection:</strong> Executed 100% client-side. Passwords are never sent to or logged on any external server.</span>
           </li>
           <li>
-            <span><strong>Direct Gateway:</strong> HTTP requests target the official university captive portal
-              (<code>122.252.242.93</code>).</span>
+            <span><strong>Direct Gateway:</strong> HTTP requests target the official university captive portal (<code>122.252.242.93</code>).</span>
           </li>
           <li>
-            <span><strong>Zero Admin Elevation:</strong> Runs with standard user privileges without modifying
-              system-level OS files.</span>
+            <span><strong>Zero Admin Elevation:</strong> Runs in standard user space without modifying system-level OS files.</span>
           </li>
           <li>
-            <span><strong>100% Open Source:</strong> Complete source code for scripts, C# binaries, and webpage is
-              public and inspectable.</span>
+            <span><strong>100% Open Source:</strong> Complete C# source code and project files are public and auditable on GitHub.</span>
           </li>
         </ul>
       </section>
 
     </div>
   </main>
-
-  <!-- Thank You & Setup Instructions Modal -->
-  <div id="thankYouModal" class="modal-overlay" onclick="if(event.target === this) closeThankYouModal()">
-    <div class="modal-card">
-      <div class="modal-header">
-        <span class="modal-icon">✓</span>
-        <h3>Setup script ready!</h3>
-      </div>
-      <p class="modal-desc">
-        Thank you for using Campus Connect. Your personalized setup script (<code>CURAJ_AutoLogin_Setup.bat</code>) has
-        been downloaded.
-      </p>
-
-      <div class="modal-steps">
-        <div class="modal-step">
-          <span class="step-badge">01</span>
-          <div>
-            <strong>If browser prompts to confirm:</strong>
-            <p>Click <em>Keep</em> or <em>Download unverified file</em> (standard for downloaded batch scripts).</p>
-          </div>
-        </div>
-
-        <div class="modal-step">
-          <span class="step-badge">02</span>
-          <div>
-            <strong>If Windows SmartScreen warns:</strong>
-            <p>Click <u>More info</u> &rarr; <strong style="color: var(--accent);">Run anyway</strong>.</p>
-          </div>
-        </div>
-
-        <div class="modal-step">
-          <span class="step-badge">03</span>
-          <div>
-            <strong>Instant Feedback:</strong>
-            <p>Once it finishes, your browser will automatically open with the confirmation screen to let you know
-              auto-login is active.</p>
-          </div>
-        </div>
-      </div>
-
-      <button class="btn btn-primary" onclick="closeThankYouModal()" style="width: 100%;">
-        Got it, thanks!
-      </button>
-    </div>
-  </div>
-
-  <!-- Success Confirmation Modal (Triggered when script completes & redirects) -->
-  <div id="successModal" class="modal-overlay" onclick="if(event.target === this) closeSuccessModal()">
-    <div class="modal-card" style="text-align: center;">
-      <div style="margin-bottom: 1.25rem;">
-        <span class="modal-icon" style="width: 44px; height: 44px; font-size: 1.35rem; margin: 0 auto;">✓</span>
-      </div>
-      <h3 style="font-family: var(--font-serif); font-size: 1.6rem; margin-bottom: 0.5rem; color: var(--foreground);">
-        Setup Successful!
-      </h3>
-      <p style="color: var(--muted); font-size: 0.92rem; line-height: 1.6; max-width: 42ch; margin: 0 auto 1.25rem;">
-        Thank you for using Campus Connect. Auto-login is now active and running in the background. You will stay
-        authenticated automatically whenever you connect to <strong>CURAJ CAMPUS CONNECT</strong>.
-      </p>
-      <div class="notice-note" style="text-align: left; margin-bottom: 1.5rem;">
-        <strong>Silent & Seamless:</strong> Whenever your PC boots or reconnects to the campus Wi-Fi, background
-        keep-alive logs you in automatically.
-      </div>
-      <button class="btn btn-primary" onclick="closeSuccessModal()" style="width: 100%;">
-        Awesome, take me to dashboard
-      </button>
-    </div>
-  </div>
-
-  <!-- Deregister Confirmation Modal -->
-  <div id="deregisterModal" class="modal-overlay" onclick="if(event.target === this) closeDeregisterModal()">
-    <div class="modal-card" style="text-align: center;">
-      <div style="margin-bottom: 1.25rem;">
-        <span class="modal-icon"
-          style="width: 44px; height: 44px; font-size: 1.35rem; margin: 0 auto; background-color: var(--muted);">✓</span>
-      </div>
-      <h3 style="font-family: var(--font-serif); font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--foreground);">
-        Successfully Deregistered
-      </h3>
-      <p style="color: var(--muted); font-size: 0.92rem; line-height: 1.6; max-width: 40ch; margin: 0 auto 1.5rem;">
-        All background processes, startup registrations, and saved credentials have been completely removed.
-      </p>
-      <button class="btn btn-primary" onclick="closeDeregisterModal()" style="width: 100%;">
-        Close
-      </button>
-    </div>
-  </div>
 
   <!-- Minimalist Footer -->
   <footer>
