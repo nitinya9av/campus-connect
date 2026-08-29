@@ -11,7 +11,10 @@ import {
   Platform,
   Alert,
   AppState,
+  NativeModules,
 } from 'react-native';
+
+const { CampusConnectModule } = NativeModules;
 import NetInfo from '@react-native-community/netinfo';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -112,6 +115,10 @@ function CampusConnectMain() {
         setUsername(creds.username);
         setPassword(creds.password);
         setIsRegistered(true);
+        // Start native 24/7 background service for phone-in-pocket auto-login
+        if (Platform.OS === 'android' && CampusConnectModule?.startBackgroundService) {
+          CampusConnectModule.startBackgroundService(creds.username, creds.password).catch(() => {});
+        }
         // Instant zero-click auto-connect on launch
         await runAutoLogin(creds.username, creds.password, 'startup');
       } else {
@@ -200,6 +207,11 @@ function CampusConnectMain() {
     await saveCredentials(username, password);
     setIsRegistered(true);
 
+    // Start native 24/7 background service
+    if (Platform.OS === 'android' && CampusConnectModule?.startBackgroundService) {
+      CampusConnectModule.startBackgroundService(username, password).catch(() => {});
+    }
+
     // Run auto-login immediately
     await runAutoLogin(username, password, 'manual-register');
   };
@@ -225,6 +237,9 @@ function CampusConnectMain() {
           style: 'destructive',
           onPress: async () => {
             await clearCredentials();
+            if (Platform.OS === 'android' && CampusConnectModule?.stopBackgroundService) {
+              CampusConnectModule.stopBackgroundService().catch(() => {});
+            }
             setUsername('');
             setPassword('');
             setIsRegistered(false);
