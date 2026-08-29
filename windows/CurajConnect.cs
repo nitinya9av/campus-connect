@@ -350,7 +350,7 @@ namespace CurajConnect
             this.Controls.Add(txtPass);
 
             btnRegister = new Button();
-            btnRegister.Text = "⚡ Register Auto-Login";
+            btnRegister.Text = "Register Auto-Login";
             btnRegister.Location = new Point(27, 215);
             btnRegister.Size = new Size(185, 40);
             btnRegister.BackColor = Color.FromArgb(2, 132, 199);
@@ -361,7 +361,7 @@ namespace CurajConnect
             this.Controls.Add(btnRegister);
 
             btnDeregister = new Button();
-            btnDeregister.Text = "❌ Deregister";
+            btnDeregister.Text = "Deregister";
             btnDeregister.Location = new Point(232, 215);
             btnDeregister.Size = new Size(185, 40);
             btnDeregister.BackColor = Color.FromArgb(71, 85, 105);
