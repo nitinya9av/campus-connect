@@ -43,3 +43,12 @@ function switchTab(os) {
     if (panel) panel.classList.add('active');
   }
 }
+
+// Auto-detect default tab based on screen width / device
+function initDefaultTab() {
+  const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  switchTab(isMobile ? 'android' : 'windows');
+}
+
+initDefaultTab();
+

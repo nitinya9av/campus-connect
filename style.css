@@ -118,9 +118,9 @@ body {
   display: inline-block;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .head-brand {
-    display: none;
+    display: none !important;
   }
 
   .running-head-inner {
