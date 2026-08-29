@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,7 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  AppState,
 } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from './src/styles/theme';
@@ -35,46 +37,147 @@ function CampusConnectMain() {
   const [networkState, setNetworkState] = useState('checking'); // 'online', 'login_needed', 'offline', 'checking'
   const [statusMessage, setStatusMessage] = useState({
     type: 'neutral', // 'success', 'error', 'neutral'
-    text: 'Checking campus network connectivity...',
+    text: 'Initializing Campus Connect macro...',
   });
 
-  const refreshNetwork = useCallback(async () => {
-    const hasNet = await checkInternetAccess(2500);
-    if (hasNet) {
+  const isAuthenticatingRef = useRef(false);
+  const usernameRef = useRef(username);
+  const passwordRef = useRef(password);
+
+  useEffect(() => {
+    usernameRef.current = username;
+  }, [username]);
+
+  useEffect(() => {
+    passwordRef.current = password;
+  }, [password]);
+
+  // Core automated login macro: runs silently and seamlessly
+  const runAutoLogin = useCallback(async (user, pass, source = 'macro') => {
+    const targetUser = user || usernameRef.current;
+    const targetPass = pass || passwordRef.current;
+
+    if (!targetUser || !targetPass) return;
+    if (isAuthenticatingRef.current) return;
+
+    // Check if already online first
+    const online = await checkInternetAccess(2000);
+    if (online) {
       setNetworkState('online');
       return;
     }
 
+    // Check if campus portal is reachable
     const reachable = await isGatewayReachable(2000);
-    if (reachable) {
-      setNetworkState('login_needed');
-    } else {
+    if (!reachable) {
       setNetworkState('offline');
+      return;
+    }
+
+    // Portal is reachable and internet is not active: trigger automatic authentication!
+    isAuthenticatingRef.current = true;
+    setIsLoading(true);
+    setNetworkState('connecting');
+    setStatusMessage({
+      type: 'neutral',
+      text: `Auto-login macro running (${source})...`,
+    });
+
+    try {
+      const res = await loginToGateway(targetUser, targetPass);
+      if (res.success) {
+        setNetworkState('online');
+        setStatusMessage({
+          type: 'success',
+          text: '✓ ' + res.message,
+        });
+      } else {
+        setNetworkState('login_needed');
+        setStatusMessage({
+          type: 'error',
+          text: '⚠ ' + res.message,
+        });
+      }
+    } finally {
+      setIsLoading(false);
+      isAuthenticatingRef.current = false;
     }
   }, []);
 
-  // Load saved credentials on startup & run initial connectivity probe
+  // 1. Startup trigger: load credentials & run auto-login immediately (Zero clicks!)
   useEffect(() => {
     (async () => {
       const creds = await getCredentials();
-      if (creds && creds.username) {
+      if (creds && creds.username && creds.password) {
         setUsername(creds.username);
         setPassword(creds.password);
         setIsRegistered(true);
+        // Instant zero-click auto-connect on launch
+        await runAutoLogin(creds.username, creds.password, 'startup');
+      } else {
+        const net = await checkInternetAccess(2500);
+        setNetworkState(net ? 'online' : 'login_needed');
+        setStatusMessage({
+          type: 'neutral',
+          text: 'Enter your credentials once to enable automatic background login.',
+        });
       }
-      await refreshNetwork();
     })();
-  }, [refreshNetwork]);
+  }, [runAutoLogin]);
 
-  // Periodic network health check every 4 seconds
+  // 2. Wi-Fi state trigger: automatically connects whenever phone connects to Wi-Fi
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (state.isConnected && state.type === 'wifi') {
+        getCredentials().then(creds => {
+          if (creds && creds.username && creds.password) {
+            runAutoLogin(creds.username, creds.password, 'wifi-connected');
+          }
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, [runAutoLogin]);
+
+  // 3. App resume trigger: automatically connects whenever user unlocks or opens app
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', nextState => {
+      if (nextState === 'active') {
+        getCredentials().then(creds => {
+          if (creds && creds.username && creds.password) {
+            runAutoLogin(creds.username, creds.password, 'app-resume');
+          }
+        });
+      }
+    });
+    return () => sub.remove();
+  }, [runAutoLogin]);
+
+  // 4. Continuous Watchdog Macro: checks every 5 seconds and auto-authenticates if session expired
   useEffect(() => {
     const timer = setInterval(() => {
-      if (!isLoading) {
-        refreshNetwork();
-      }
-    }, 4000);
+      if (isAuthenticatingRef.current) return;
+      getCredentials().then(creds => {
+        if (creds && creds.username && creds.password) {
+          checkInternetAccess(2000).then(hasNet => {
+            if (hasNet) {
+              setNetworkState('online');
+            } else {
+              isGatewayReachable(2000).then(reachable => {
+                if (reachable) {
+                  setNetworkState('login_needed');
+                  runAutoLogin(creds.username, creds.password, 'watchdog');
+                } else {
+                  setNetworkState('offline');
+                }
+              });
+            }
+          });
+        }
+      });
+    }, 5000);
     return () => clearInterval(timer);
-  }, [refreshNetwork, isLoading]);
+  }, [runAutoLogin]);
 
   // Handle number input (strict 10 digits filter)
   const handleUsernameChange = (val) => {
@@ -82,7 +185,7 @@ function CampusConnectMain() {
     setUsername(cleaned);
   };
 
-  // Register credentials and test login
+  // Register credentials and run initial connection
   const handleRegister = async () => {
     if (!username || username.length < 10) {
       Alert.alert('Incomplete Phone Number', 'Please enter your 10-digit mobile number.');
@@ -93,58 +196,21 @@ function CampusConnectMain() {
       return;
     }
 
-    setIsLoading(true);
-    setStatusMessage({ type: 'neutral', text: 'Authenticating with CURAJ gateway...' });
-
     // Save locally
     await saveCredentials(username, password);
     setIsRegistered(true);
 
-    // Attempt direct login
-    const res = await loginToGateway(username, password);
-    setIsLoading(false);
-
-    if (res.success) {
-      setNetworkState('online');
-      setStatusMessage({
-        type: 'success',
-        text: '✓ ' + res.message,
-      });
-    } else {
-      await refreshNetwork();
-      setStatusMessage({
-        type: 'error',
-        text: '⚠ ' + res.message,
-      });
-    }
+    // Run auto-login immediately
+    await runAutoLogin(username, password, 'manual-register');
   };
 
-  // Test connection manually
+  // Manual sync / test connection
   const handleTestConnection = async () => {
     if (!username || !password) {
       Alert.alert('No Credentials', 'Please enter your credentials first.');
       return;
     }
-
-    setIsLoading(true);
-    setStatusMessage({ type: 'neutral', text: 'Connecting to CURAJ gateway...' });
-
-    const res = await loginToGateway(username, password);
-    setIsLoading(false);
-
-    if (res.success) {
-      setNetworkState('online');
-      setStatusMessage({
-        type: 'success',
-        text: '✓ ' + res.message,
-      });
-    } else {
-      await refreshNetwork();
-      setStatusMessage({
-        type: 'error',
-        text: '✕ ' + res.message,
-      });
-    }
+    await runAutoLogin(username, password, 'manual-sync');
   };
 
   // Deregister: clean up all saved data
@@ -203,10 +269,10 @@ function CampusConnectMain() {
             isLoading
               ? styles.statusPillConnecting
               : networkState === 'online'
-              ? styles.statusPillOnline
-              : networkState === 'login_needed'
-              ? styles.statusPillLoginNeeded
-              : styles.statusPillOffline,
+                ? styles.statusPillOnline
+                : networkState === 'login_needed'
+                  ? styles.statusPillLoginNeeded
+                  : styles.statusPillOffline,
           ]}
         >
           <Text
@@ -215,21 +281,21 @@ function CampusConnectMain() {
               isLoading
                 ? styles.statusPillTextConnecting
                 : networkState === 'online'
-                ? styles.statusPillTextOnline
-                : networkState === 'login_needed'
-                ? styles.statusPillTextLoginNeeded
-                : styles.statusPillTextOffline,
+                  ? styles.statusPillTextOnline
+                  : networkState === 'login_needed'
+                    ? styles.statusPillTextLoginNeeded
+                    : styles.statusPillTextOffline,
             ]}
           >
             {isLoading
               ? '⚡ CONNECTING'
               : networkState === 'online'
-              ? '● ONLINE'
-              : networkState === 'login_needed'
-              ? '● LOGIN NEEDED'
-              : networkState === 'offline'
-              ? '○ NO WI-FI'
-              : '○ CHECKING'}
+                ? '● ONLINE'
+                : networkState === 'login_needed'
+                  ? '● LOGIN NEEDED'
+                  : networkState === 'offline'
+                    ? '○ NO WI-FI'
+                    : '○ CHECKING'}
           </Text>
         </View>
       </View>
