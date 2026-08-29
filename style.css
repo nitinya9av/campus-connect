@@ -118,6 +118,21 @@ body {
   display: inline-block;
 }
 
+@media (max-width: 640px) {
+  .head-brand {
+    display: none;
+  }
+
+  .running-head-inner {
+    justify-content: center;
+  }
+
+  .nav-links {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
 .nav-links {
   display: flex;
   align-items: center;
