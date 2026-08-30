@@ -1,4 +1,4 @@
-# CURAJ Campus Connect • 1-Click Wi-Fi Auto-Login
+# Campus Connect
 
 Automated login and watchdog tool for the Central University of Rajasthan (CURAJ) Wi-Fi captive portal (`http://122.252.242.93/.../login.html`).
 
@@ -6,7 +6,7 @@ Designed for **simplicity, privacy, and full transparency**. Requires zero admin
 
 ---
 
-## 🌐 Web Portal (`index.html`)
+## Web Portal
 
 The root portal is built with a minimalist, warm editorial aesthetic featuring:
 - **Light Mode ("Warm Paper")** & **Dark Mode ("Night Edition")** with a persistent `☼` / `☾` theme toggle.
@@ -28,19 +28,19 @@ The root portal is built with a minimalist, warm editorial aesthetic featuring:
 
 ```
 curaj-wifi/
-├── index.html            <- Web portal at root (works directly on GitHub Pages)
-├── style.css             <- Minimalist warm editorial styles (Light & Dark theme)
-├── app.js                <- Theme toggle & client-side file generators
+├── index.html                        <- Web portal at root (works directly on GitHub Pages)
+├── style.css                         <- Minimalist warm editorial styles (Light & Dark theme)
+├── app.js                            <- Theme toggle & client-side file generators
 ├── windows/
-│   ├── README.md         <- Windows build & command-line usage guide
-│   ├── campus-connect.cs <- 100% auditable C# source code
-│   └── app.manifest      <- Per-Monitor V2 High-DPI manifest
+│   ├── README.md                     <- Windows build & command-line usage guide
+│   ├── campus-connect.cs             <- 100% auditable C# source code
+│   └── app.manifest                  <- Per-Monitor V2 High-DPI manifest
 ├── android/
-│   ├── README.md         <- MacroDroid setup guide (Randomized MAC)
-│   ├── CURAJ_AutoLogin.macro <- Universal macro template
-│   ├── macrodroid_quick_copy.txt <- Copy-paste credentials snippet
-│   └── test_login_android.sh <- Lightweight test script
-├── .gitignore            <- Protects local private credentials
+│   ├── README.md                     <- MacroDroid setup guide (Randomized MAC)
+│   ├── CURAJ_AutoLogin.macro         <- Universal macro template
+│   ├── macrodroid_quick_copy.txt     <- Copy-paste credentials snippet
+│   └── test_login_android.sh         <- Lightweight test script
+├── .gitignore                        <- Protects local private credentials
 └── README.md
 ```
 
