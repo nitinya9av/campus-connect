@@ -28,10 +28,14 @@ jobs:
         run: |
           & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32manifest:windows\app.manifest /out:windows\campus-connect.exe windows\campus-connect.cs
 
+      - name: Build and Package MSIX
+        run: |
+          powershell -ExecutionPolicy Bypass -File windows/build-msix.ps1
+
       - name: Prepare Artifact for SignPath
         if: env.SIGNPATH_API_TOKEN != ''
         run: |
-          Compress-Archive -Path windows\campus-connect.exe -DestinationPath unsigned-app.zip
+          Compress-Archive -Path windows\campus-connect.exe, windows\campus-connect.msix -DestinationPath unsigned-app.zip
 
       - name: Submit Signing Request to SignPath Foundation
         if: env.SIGNPATH_API_TOKEN != ''
@@ -46,14 +50,10 @@ jobs:
           wait-for-completion: true
           output-artifact-directory: 'signed-binaries'
 
-      - name: Extract Signed Binary
+      - name: Extract Signed Binaries
         if: env.SIGNPATH_API_TOKEN != ''
         run: |
           Expand-Archive -Path signed-binaries\*.zip -DestinationPath windows -Force
-
-      - name: Build and Package MSIX
-        run: |
-          powershell -ExecutionPolicy Bypass -File windows/build-msix.ps1
 
       - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
