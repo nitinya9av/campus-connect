@@ -51,6 +51,10 @@ jobs:
         run: |
           Expand-Archive -Path signed-binaries\*.zip -DestinationPath windows -Force
 
+      - name: Build and Package MSIX
+        run: |
+          powershell -ExecutionPolicy Bypass -File windows/build-msix.ps1
+
       - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -58,6 +62,8 @@ jobs:
           name: ${{ startsWith(github.ref, 'refs/tags/') && format('Campus Connect {0}', github.ref_name) || 'Campus Connect (Latest)' }}
           draft: false
           prerelease: false
-          files: windows/campus-connect.exe
+          files: |
+            windows/campus-connect.exe
+            windows/campus-connect.msix
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
