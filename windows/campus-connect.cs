@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 using System.Diagnostics;
@@ -104,26 +105,27 @@ namespace CurajConnect
 
         public static bool IsPortalReachable()
         {
+            // Fast LAN probe to Inventum NAS controller (1.254.254.254)
             try
             {
-                HttpWebRequest req = (HttpWebRequest)WebRequest.Create("http://" + PORTAL_IP + "/userportal/pages/usermedia/curaj/app/campus/ui/login.html");
-                req.Timeout = 3000;
-                req.Method = "GET";
-                using (HttpWebResponse res = (HttpWebResponse)req.GetResponse())
+                HttpWebRequest reqNas = (HttpWebRequest)WebRequest.Create("http://" + NAS_IP + "/");
+                reqNas.Timeout = 1200;
+                reqNas.Method = "GET";
+                using (HttpWebResponse resNas = (HttpWebResponse)reqNas.GetResponse())
                 {
-                    return res.StatusCode == HttpStatusCode.OK;
+                    return resNas.StatusCode == HttpStatusCode.OK;
                 }
             }
             catch
             {
                 try
                 {
-                    HttpWebRequest reqNas = (HttpWebRequest)WebRequest.Create("http://" + NAS_IP + "/");
-                    reqNas.Timeout = 3000;
-                    reqNas.Method = "GET";
-                    using (HttpWebResponse resNas = (HttpWebResponse)reqNas.GetResponse())
+                    HttpWebRequest req = (HttpWebRequest)WebRequest.Create("http://" + PORTAL_IP + "/userportal/pages/usermedia/curaj/app/campus/ui/login.html");
+                    req.Timeout = 1500;
+                    req.Method = "GET";
+                    using (HttpWebResponse res = (HttpWebResponse)req.GetResponse())
                     {
-                        return resNas.StatusCode == HttpStatusCode.OK;
+                        return res.StatusCode == HttpStatusCode.OK;
                     }
                 }
                 catch { return false; }
@@ -140,7 +142,7 @@ namespace CurajConnect
                 try
                 {
                     HttpWebRequest initReq = (HttpWebRequest)WebRequest.Create("http://" + NAS_IP + "/");
-                    initReq.Timeout = 4000;
+                    initReq.Timeout = 1500;
                     initReq.Method = "GET";
                     initReq.CookieContainer = cookies;
                     using (HttpWebResponse initRes = (HttpWebResponse)initReq.GetResponse())
@@ -155,7 +157,7 @@ namespace CurajConnect
                             {
                                 string portalUrl = html.Substring(idx + 4, endIdx - idx - 4);
                                 HttpWebRequest portalReq = (HttpWebRequest)WebRequest.Create(portalUrl);
-                                portalReq.Timeout = 4000;
+                                portalReq.Timeout = 1500;
                                 portalReq.CookieContainer = cookies;
                                 using (HttpWebResponse portalRes = (HttpWebResponse)portalReq.GetResponse()) { }
                             }
@@ -174,7 +176,7 @@ namespace CurajConnect
                 req.Method = "POST";
                 req.ContentType = "application/x-www-form-urlencoded; charset=UTF-8";
                 req.ContentLength = data.Length;
-                req.Timeout = 8000;
+                req.Timeout = 3000;
                 req.CookieContainer = cookies;
                 req.Headers.Add("X-Requested-With", "XMLHttpRequest");
                 req.Referer = "http://" + PORTAL_IP + "/userportal/pages/usermedia/curaj/app/campus/ui/login.html";
@@ -197,17 +199,19 @@ namespace CurajConnect
                     try
                     {
                         HttpWebRequest nasReq = (HttpWebRequest)WebRequest.Create("http://" + NAS_IP + "/");
-                        nasReq.Timeout = 4000;
+                        nasReq.Timeout = 1500;
                         nasReq.CookieContainer = cookies;
                         using (HttpWebResponse nasRes = (HttpWebResponse)nasReq.GetResponse()) { }
                     }
                     catch { }
                 }
 
-                // Brief pause for firewall route activation
-                Thread.Sleep(1200);
+                // Instant verification on known success indicators
+                if (response.Contains("redirect_to_nas") || response.Contains("success_net") || response.Contains("\"errorKey\":\"success\""))
+                {
+                    return "SUCCESS";
+                }
 
-                // Step 4: Rigorously verify genuine internet flow
                 if (IsOnline())
                 {
                     return "SUCCESS";
@@ -222,11 +226,6 @@ namespace CurajConnect
                 if (response.Contains("Invalid") || response.Contains("Incorrect") || response.Contains("fail"))
                 {
                     return "Invalid Mobile Number or Password.";
-                }
-
-                if (response.Contains("success_net") || response.Contains("\"errorKey\":\"success\""))
-                {
-                    if (IsOnline()) return "SUCCESS";
                 }
 
                 return "Gateway responded (" + response.Trim() + "). Verifying connection...";
@@ -330,25 +329,25 @@ namespace CurajConnect
             string user, pass;
             if (!LoadCredentials(out user, out pass)) return;
 
+            AutoResetEvent wakeEvent = new AutoResetEvent(false);
+
+            // Instant event trigger: fires the exact millisecond Wi-Fi connects or IP changes
+            NetworkChange.NetworkAddressChanged += (s, e) => { try { wakeEvent.Set(); } catch { } };
+            NetworkChange.NetworkAvailabilityChanged += (s, e) => { try { wakeEvent.Set(); } catch { } };
+
             while (true)
             {
                 try
                 {
-                    if (!IsOnline())
+                    if (IsPortalReachable())
                     {
-                        if (IsPortalReachable())
-                        {
-                            PerformLogin(user, pass);
-                        }
-                        // Disconnected or re-authenticating: recheck in 5s
-                        Thread.Sleep(5000);
-                        continue;
+                        PerformLogin(user, pass);
                     }
                 }
                 catch { }
 
-                // Online: sleep 25 seconds before next check
-                Thread.Sleep(25000);
+                // Sleep up to 8s, or wake up instantly (0ms) when network changes
+                wakeEvent.WaitOne(8000);
             }
         }
 

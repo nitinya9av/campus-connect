@@ -66,18 +66,12 @@ export async function isGatewayReachable(timeoutMs = 3000) {
  */
 export async function loginToGateway(username, password, timeoutMs = 8000) {
   try {
-    // 0. If already online, return immediately
-    const alreadyOnline = await checkInternetAccess(2000);
-    if (alreadyOnline) {
-      return { success: true, message: 'Already connected to campus internet.' };
-    }
-
     let sessionCookie = '';
 
     // 1. Prime session with Inventum NAS controller (triggers client MAC/IP registration)
     try {
       const nasController = new AbortController();
-      const nasTimeout = setTimeout(() => nasController.abort(), 2500);
+      const nasTimeout = setTimeout(() => nasController.abort(), 1200);
       const nasRes = await fetch(NAS_URL, {
         method: 'GET',
         headers: { 'Cache-Control': 'no-cache' },
@@ -93,7 +87,7 @@ export async function loginToGateway(username, password, timeoutMs = 8000) {
         
         // 2. Fetch the userportal challenge URL to get JSESSIONID bound to client MAC/IP
         const portalController = new AbortController();
-        const portalTimeout = setTimeout(() => portalController.abort(), 3000);
+        const portalTimeout = setTimeout(() => portalController.abort(), 1500);
         const portalRes = await fetch(portalUrl, {
           method: 'GET',
           signal: portalController.signal,
@@ -108,9 +102,19 @@ export async function loginToGateway(username, password, timeoutMs = 8000) {
             sessionCookie = cookieMatch[1];
           }
         }
+      } else {
+        // If NAS returned no redirect, check if internet is already working
+        const alreadyOnline = await checkInternetAccess(1000);
+        if (alreadyOnline) {
+          return { success: true, message: 'Already connected to campus internet.' };
+        }
       }
     } catch (e) {
-      // NAS probe failed, proceed to direct login
+      // NAS probe failed, proceed to direct login or check if already online
+      const alreadyOnline = await checkInternetAccess(1000);
+      if (alreadyOnline) {
+        return { success: true, message: 'Already connected to campus internet.' };
+      }
     }
 
     // 3. POST credentials to userportal endpoint
@@ -127,7 +131,7 @@ export async function loginToGateway(username, password, timeoutMs = 8000) {
     }
 
     const loginController = new AbortController();
-    const loginTimeout = setTimeout(() => loginController.abort(), timeoutMs);
+    const loginTimeout = setTimeout(() => loginController.abort(), 2500);
 
     const res = await fetch(GATEWAY_LOGIN_URL, {
       method: 'POST',
@@ -143,7 +147,7 @@ export async function loginToGateway(username, password, timeoutMs = 8000) {
     if (text.includes('redirect_to_nas')) {
       try {
         const pingController = new AbortController();
-        const pingTimeout = setTimeout(() => pingController.abort(), 2000);
+        const pingTimeout = setTimeout(() => pingController.abort(), 1000);
         await fetch(NAS_URL, { method: 'GET', signal: pingController.signal });
         clearTimeout(pingTimeout);
       } catch {}
@@ -154,22 +158,15 @@ export async function loginToGateway(username, password, timeoutMs = 8000) {
       return { success: false, message: 'Invalid Mobile Number or Password.' };
     }
 
-    // 6. Verification loop: check internet access up to 3 times
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      await new Promise(r => setTimeout(r, 1200));
-      const hasNet = await checkInternetAccess(2500);
-      if (hasNet) {
-        return { success: true, message: 'Connected successfully to CURAJ Wi-Fi.' };
-      }
+    // 6. Immediate success detection
+    if (text.includes('redirect_to_nas') || text.includes('success_net') || text.includes('"errorKey":"success"') || text.includes('Session already running')) {
+      return { success: true, message: 'Connected successfully to CURAJ Wi-Fi.' };
     }
 
-    if (text.includes('Session already running')) {
-      return { success: true, message: 'Connected! Session active on CURAJ Wi-Fi.' };
-    }
-
-    // If server returned redirect_to_nas or success_net, credentials were accepted by gateway
-    if (text.includes('redirect_to_nas') || text.includes('success_net') || text.includes('"errorKey":"success"')) {
-      return { success: true, message: 'Login accepted by campus gateway! Internet active.' };
+    // Fallback fast check
+    const isOnlineNow = await checkInternetAccess(1200);
+    if (isOnlineNow) {
+      return { success: true, message: 'Connected successfully to CURAJ Wi-Fi.' };
     }
 
     return {

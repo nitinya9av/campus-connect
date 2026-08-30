@@ -64,21 +64,6 @@ function CampusConnectMain() {
     if (!targetUser || !targetPass) return;
     if (isAuthenticatingRef.current) return;
 
-    // Check if already online first
-    const online = await checkInternetAccess(2000);
-    if (online) {
-      setNetworkState('online');
-      return;
-    }
-
-    // Check if campus portal is reachable
-    const reachable = await isGatewayReachable(2000);
-    if (!reachable) {
-      setNetworkState('offline');
-      return;
-    }
-
-    // Portal is reachable and internet is not active: trigger automatic authentication!
     isAuthenticatingRef.current = true;
     setIsLoading(true);
     setNetworkState('connecting');
