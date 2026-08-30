@@ -1,4 +1,4 @@
-# Campus Connect &middot; CURAJ Wi-Fi
+# Campus Connect
 
 [![Google Play](https://img.shields.io/badge/Google_Play-Campus_Connect-4285F4?style=flat-square&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.niitnydv.campusconnect)
 [![GitHub Release](https://img.shields.io/github/v/release/nitinya9av/campus-connect?style=flat-square&logo=github&color=306998)](https://github.com/nitinya9av/campus-connect/releases/latest)
@@ -19,19 +19,23 @@ Campus Connect eliminates the daily hassle of repeatedly typing mobile credentia
 | **Android** | `.apk` / `.aab` | **[Google Play Store](https://play.google.com/store/apps/details?id=com.niitnydv.campusconnect)** | Official Android release. Silent 24/7 background reconnection service with zero sensitive permissions. |
 | **Windows** | `.msix` | **[GitHub Releases](https://github.com/nitinya9av/campus-connect/releases/latest)** | Modern packaged Windows application. Native 1-click install, start menu integration, and clean sandbox. |
 | **Windows** | `.exe` | **[GitHub Releases](https://github.com/nitinya9av/campus-connect/releases/latest)** | Portable standalone client (~26 KB). Zero installation, zero admin rights, runs in user-space. |
+| **macOS** | `Script / launchd` | **[1-Line Terminal Command](mac/)** | Native user-space background service via Apple's built-in `launchd`. Zero GUI overhead. |
+| **iOS** | `Apple Shortcut` | **[Shortcuts Automation](ios/)** | Native iOS Shortcuts automation. Zero app installation needed; triggers automatically upon Wi-Fi association. |
 | **Web Portal** | Static Site | **[nitinyadav.xyz/campus-connect](https://nitinyadav.xyz/campus-connect/)** | Minimalist editorial portal with setup instructions, status diagnostics, and privacy documentation. |
 
 ---
 
 ## Key Features
 
-- **⚡ Sub-Second Instant Authentication (<1s)**: Connects to campus Wi-Fi instantly. Eliminates artificial delay loops and sequential timeout traps.
+- **⚡ Sub-Second Instant Authentication (<1s)**: Connects to campus Wi-Fi instantly across all platforms. Eliminates artificial delay loops and sequential timeout traps.
 - **🛡️ Zero Sensitive Permissions**: The Android app requests **no location, no camera, no microphone, no storage, and no contacts access**. 100% auditable client-side logic.
 - **🔄 Event-Driven Background Reconnection**:
   - **Windows**: Hooks directly into native OS network events (`NetworkChange.NetworkAddressChanged`) for 0ms wakeup the exact moment Wi-Fi associates.
+  - **macOS**: Native user-space `launchd` LaunchAgent triggered instantly on network state changes.
   - **Android**: Lightweight native foreground service running with `IMPORTANCE_MIN` for seamless 24/7 background session maintenance without battery drain.
-- **🔐 Local-Only Security**: All credentials are encrypted and stored strictly on your local device (`EncryptedSharedPreferences` on Android, `%APPDATA%\CURAJ_Connect\config.json` on Windows). Zero external telemetry, tracking, or remote analytics.
-- **🧹 1-Click Clean Deregistration**: Tap **Deregister** anytime to stop all services and permanently erase stored credentials from your device.
+  - **iOS**: Apple Shortcuts native Wi-Fi personal automation for silent, background authentication.
+- **🔐 Local-Only Security**: All credentials are encrypted and stored strictly on your local device (`EncryptedSharedPreferences` on Android, `%APPDATA%\CURAJ_Connect\config.json` on Windows, `~/.curaj-connect/config.json` on macOS). Zero external telemetry, tracking, or remote analytics.
+- **🧹 1-Click Clean Deregistration**: Tap or run **Deregister / Uninstall** anytime to stop all services and permanently erase stored credentials from your device.
 
 ---
 
@@ -80,6 +84,12 @@ curaj-wifi/
 │   ├── build-msix.ps1                <- Automated packaging & signing script for .msix
 │   ├── app.manifest                  <- Per-Monitor V2 High-DPI Windows application manifest
 │   └── README.md                     <- Windows developer & compilation instructions
+├── mac/
+│   ├── campus-connect.sh             <- Native macOS shell client & launchd daemon
+│   ├── install.sh                    <- 1-line Terminal installer script
+│   └── README.md                     <- macOS documentation & manual commands
+├── ios/
+│   └── README.md                     <- Native Apple Shortcuts automation setup guide
 ├── mobile/                           <- React Native & Native Android codebase
 │   ├── App.js                        <- Cross-platform mobile UI & registration screen
 │   ├── src/                          <- Shared API, storage, and theme utilities
@@ -98,6 +108,29 @@ curaj-wifi/
 ├── .gitignore                        <- Excludes build artifacts, binaries, and keys
 └── README.md                         <- Root documentation
 ```
+
+---
+
+## macOS 1-Line Terminal Install
+
+On any MacBook or iMac, open **Terminal** (`Cmd + Space` &rarr; `Terminal`) and paste:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac/install.sh | bash
+```
+
+- Wakes up in **0ms** using macOS native `launchd` service when Wi-Fi connects.
+- To uninstall anytime: `~/.curaj-connect/campus-connect.sh --uninstall`
+
+---
+
+## iOS (iPhone & iPad) Setup via Apple Shortcuts
+
+No App Store download or third-party background software required:
+1. Open the built-in **Shortcuts** app on your iPhone &rarr; tap the **Automation** tab &rarr; tap **`+`**.
+2. Select **Wi-Fi**, choose **`CURAJ-WIFI`**, set to **Run Immediately** (toggle off *Notify When Run*).
+3. Add **Get Contents of URL** action (POST to `http://122.252.242.93/userportal/newlogin.do` with your credentials).
+4. See the [Complete iOS Shortcuts Guide](ios/README.md) for full step-by-step instructions.
 
 ---
 

@@ -21,28 +21,29 @@ if (modeBtn) {
 }
 updateModeIcon();
 
-// Tab Switcher (Windows / Android)
+// Tab Switcher (Windows / Android / macOS / iOS)
 function switchTab(os) {
   document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
 
-  if (os === 'windows') {
-    const btn = document.getElementById('tab-btn-windows');
-    const panel = document.getElementById('panel-windows');
-    if (btn) btn.classList.add('active');
-    if (panel) panel.classList.add('active');
-  } else if (os === 'android') {
-    const btn = document.getElementById('tab-btn-android');
-    const panel = document.getElementById('panel-android');
-    if (btn) btn.classList.add('active');
-    if (panel) panel.classList.add('active');
-  }
+  const btn = document.getElementById(`tab-btn-${os}`);
+  const panel = document.getElementById(`panel-${os}`);
+  if (btn) btn.classList.add('active');
+  if (panel) panel.classList.add('active');
 }
 
-// Auto-detect default tab based on screen width / device
+// Auto-detect default tab based on user operating system
 function initDefaultTab() {
-  const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  switchTab(isMobile ? 'android' : 'windows');
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/i.test(ua)) {
+    switchTab('ios');
+  } else if (/Android/i.test(ua)) {
+    switchTab('android');
+  } else if (/Macintosh|Mac OS X/i.test(ua)) {
+    switchTab('macos');
+  } else {
+    switchTab('windows');
+  }
 }
 
 initDefaultTab();
