@@ -1,8 +1,4 @@
 #!/bin/bash
-# ==============================================================================
-# Campus Connect &middot; 1-Line Terminal Installer for macOS
-# Usage: curl -sSL https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac/install.sh | bash
-# ==============================================================================
 
 set -e
 
