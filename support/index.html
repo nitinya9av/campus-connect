@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support &middot; Campus Connect</title>
+  <meta name="description"
+    content="Support the open-source development of Campus Connect. Help us fund Microsoft Store and Apple App Store developer fees to keep CURAJ Wi-Fi automation free and accessible.">
+  <link rel="icon" type="image/png" href="../favicon.png">
+  <link rel="apple-touch-icon" href="../favicon.png">
+  <script>
+    (() => {
+      try {
+        if (localStorage.getItem('theme') === 'dark') {
+          document.documentElement.classList.add('dark');
+        }
+      } catch { }
+    })();
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="../style.css">
+  <script async src="https://bondin.io/embed/v1.js"></script>
+  <style>
+    .support-header {
+      padding: 3rem 0 2rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2.5rem;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-decoration: none;
+      margin-bottom: 1.25rem;
+      transition: color 0.15s ease;
+    }
+
+    .back-link:hover {
+      color: var(--accent);
+    }
+
+    .support-title {
+      font-family: var(--font-serif);
+      font-size: 2.25rem;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      color: var(--foreground);
+      margin-bottom: 0.5rem;
+    }
+
+    .support-meta {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--faint);
+    }
+
+    .goal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      position: relative;
+    }
+
+    .goal-badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border: 1px solid var(--border);
+    }
+
+    .badge-funded {
+      color: var(--accent);
+      background: var(--surface);
+    }
+
+    .badge-target1 {
+      color: #d97706;
+      background: var(--surface);
+    }
+
+    .badge-target2 {
+      color: #dc2626;
+      background: var(--surface);
+    }
+
+    .action-cta-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2rem;
+      margin: 2.5rem 0;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <div class="page-column">
+
+      <header class="support-header">
+        <a href="../" class="back-link">
+          &larr; Back to Campus Connect Portal
+        </a>
+        <h1 class="support-title">Support Campus Connect</h1>
+        <p class="support-meta">
+          COMMUNITY &middot; DEVELOPER SUSTAINABILITY &middot; OPEN ECOSYSTEM
+        </p>
+      </header>
+
+      <p
+        style="color: var(--foreground); font-size: 1.15rem; font-family: var(--font-serif); font-weight: 500; line-height: 1.6; margin-bottom: 1rem;">
+        Campus Connect is 100% free and open-source software built for every student, researcher, and faculty member at
+        the Central University of Rajasthan.
+      </p>
+
+      <p style="color: var(--muted); font-size: 0.92rem; line-height: 1.7; margin-bottom: 2.5rem;">
+        Our mission is simple: eliminate captive portal friction completely. We believe campus internet should connect
+        instantly without manual logins or complex hurdles.
+        To distribute trusted, signed applications on official app stores and eliminate security warnings for students,
+        we face direct developer registration fees. Your support helps us recover past expenses and expand official
+        distribution across all major platforms.
+      </p>
+
+      <h2 class="section-label">Platform Distribution Goals</h2>
+
+      <!-- GOAL 1 -->
+      <div class="goal-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+          <div>
+            <span class="goal-badge badge-funded">$25 &middot; Funded &amp; Active</span>
+            <h3
+              style="font-family: var(--font-serif); font-size: 1.25rem; color: var(--foreground); margin-top: 0.4rem; margin-bottom: 0.25rem;">
+              Google Play Store (Android)
+            </h3>
+          </div>
+          <i class="fa-brands fa-google-play" style="font-size: 1.4rem; color: var(--muted);"></i>
+        </div>
+        <p style="color: var(--muted); font-size: 0.88rem; line-height: 1.6; margin: 0;">
+          A $25 one-time developer registration fee was paid out-of-pocket to publish the official Android application
+          on the Google Play Store with silent 24/7 background reconnection.
+          Help us recover this initial personal investment so we can continue maintaining the app for all university
+          students.
+        </p>
+      </div>
+
+      <!-- GOAL 2 -->
+      <div class="goal-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+          <div>
+            <span class="goal-badge badge-target1">$19 &middot; Target Goal #1</span>
+            <h3
+              style="font-family: var(--font-serif); font-size: 1.25rem; color: var(--foreground); margin-top: 0.4rem; margin-bottom: 0.25rem;">
+              Microsoft Store (Windows 10 &amp; 11)
+            </h3>
+          </div>
+          <i class="fa-brands fa-windows" style="font-size: 1.4rem; color: var(--muted);"></i>
+        </div>
+        <p style="color: var(--muted); font-size: 0.88rem; line-height: 1.6; margin: 0;">
+          A $19 developer fee allows us to publish our modern packaged application (<code>campus-connect.msix</code>)
+          directly to the official Microsoft Store.
+          This will provide 1-click installation directly from Windows, automatic background updates, and complete
+          elimination of Windows SmartScreen warning screens.
+        </p>
+      </div>
+
+      <!-- GOAL 3 -->
+      <div class="goal-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+          <div>
+            <span class="goal-badge badge-target2">$99/year &middot; Target Goal #2</span>
+            <h3
+              style="font-family: var(--font-serif); font-size: 1.25rem; color: var(--foreground); margin-top: 0.4rem; margin-bottom: 0.25rem;">
+              Apple App Store (iOS &amp; iPadOS)
+            </h3>
+          </div>
+          <i class="fa-brands fa-apple" style="font-size: 1.4rem; color: var(--muted);"></i>
+        </div>
+        <p style="color: var(--muted); font-size: 0.88rem; line-height: 1.6; margin: 0;">
+          Apple strictly requires an active $99/year Apple Developer Program membership to compile, sign, and publish
+          native applications to the iOS App Store.
+          This will enable us to ship a native iOS/iPadOS app that solves background Wi-Fi authentication without
+          needing manual Shortcuts or complex workarounds.
+        </p>
+      </div>
+
+      <!-- Action Box -->
+      <div class="action-cta-box">
+        <h2 style="font-family: var(--font-serif); font-size: 1.4rem; color: var(--foreground); margin-bottom: 0.5rem;">
+          How You Can Support
+        </h2>
+        <p style="color: var(--muted); font-size: 0.9rem; max-width: 48ch; margin: 0 auto 1.5rem; line-height: 1.6;">
+          Whether you want to sponsor a developer fee or send a small tip, every contribution helps keep this project
+          free and accessible for all students.
+        </p>
+
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.85rem;">
+          <button type="button" class="btn btn-primary"
+            style="padding: 0.8rem 1.6rem; font-size: 0.9rem; gap: 0.6rem; cursor: pointer;"
+            onclick="const b = document.getElementById('bondin-widget'); if (b && b.open) { b.open(); } else { window.open('https://bondin.io/niitnydv/support', '_blank'); }">
+            <i class="fa-solid fa-indian-rupee-sign"></i> Support via Bondin (UPI &amp; Cards)
+          </button>
+          <a href="https://github.com/sponsors/nitinya9av" target="_blank" rel="noopener" class="btn btn-outline"
+            style="padding: 0.8rem 1.6rem; font-size: 0.9rem; gap: 0.6rem; border: 1px solid var(--border);">
+            <i class="fa-regular fa-heart" style="color: #e11d48;"></i> Sponsor on GitHub
+          </a>
+        </div>
+
+        <!-- In-Page Bondin Checkout Modal Trigger (Hidden Native Button) -->
+        <bondin-support id="bondin-widget" username="niitnydv" label="Support me"
+          style="display: none;"></bondin-support>
+      </div>
+
+      <!-- Transparency Section -->
+      <section class="content-section" style="margin-top: 3rem; margin-bottom: 3rem;">
+        <h2 class="section-label">Financial Transparency</h2>
+        <ul class="guarantee-list">
+          <li>
+            <span><strong>Always Free &amp; Open Source:</strong> Campus Connect will never have paywalls, in-app
+              purchases, advertisements, or tracking. The code is and will always remain free software under the MIT
+              License.</span>
+          </li>
+        </ul>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Minimalist Footer -->
+  <footer>
+    <div class="page-column">
+      <ul class="footer-links">
+        <li><a href="https://github.com/nitinya9av/campus-connect" target="_blank" rel="noopener" class="ext"><i
+              class="fa-brands fa-github"></i> github</a></li>
+        <li><a href="../support/">support project</a></li>
+        <li><a href="../privacy/">privacy policy</a></li>
+      </ul>
+      <p>campus connect &middot; open source</p>
+    </div>
+  </footer>
+
+  <script src="../app.js"></script>
+</body>
+
+</html>

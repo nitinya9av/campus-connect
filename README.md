@@ -189,6 +189,16 @@ cd android
 
 ---
 
+## Support & Sponsoring
+
+Campus Connect is completely free and open-source for all CURAJ students and faculty. To help us maintain the Google Play release ($25 funded), bring the app to the Microsoft Store ($19 goal), and publish on the Apple App Store ($99/yr goal), consider supporting:
+
+- **[Support via Bondin (UPI, Cards & NetBanking)](https://bondin.io/niitnydv/support)**
+- **[Sponsor on GitHub](https://github.com/sponsors/nitinya9av)**
+- Complete transparency & goals: **[nitinyadav.xyz/campus-connect/support](https://nitinyadav.xyz/campus-connect/support/)**
+
+---
+
 ## Acknowledgements
 
 - **SignPath Foundation**: Free open-source code signing certificate provided by the [SignPath Foundation](https://signpath.org).

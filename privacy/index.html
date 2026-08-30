@@ -9,6 +9,15 @@
     content="Privacy Policy for Campus Connect (Android & Windows). Zero telemetry, 100% client-side, local credential storage only.">
   <link rel="icon" type="image/png" href="../favicon.png">
   <link rel="apple-touch-icon" href="../favicon.png">
+  <script>
+    (() => {
+      try {
+        if (localStorage.getItem('theme') === 'dark') {
+          document.documentElement.classList.add('dark');
+        }
+      } catch { }
+    })();
+  </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="stylesheet" href="../style.css">
   <style>
@@ -260,9 +269,10 @@
   <footer>
     <div class="page-column">
       <ul class="footer-links">
-        <li><a href="../">home</a></li>
-        <li><a href="https://github.com/nitinya9av/campus-connect" target="_blank" rel="noopener" class="ext"><i class="fa-brands fa-github"></i> github</a></li>
-        <li><a href="./" style="color: var(--accent);">privacy policy</a></li>
+        <li><a href="https://github.com/nitinya9av/campus-connect" target="_blank" rel="noopener" class="ext"><i
+              class="fa-brands fa-github"></i> github</a></li>
+        <li><a href="../support/">support project</a></li>
+        <li><a href="../privacy/">privacy policy</a></li>
       </ul>
       <p>campus connect &middot; open source</p>
     </div>

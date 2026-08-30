@@ -1,4 +1,15 @@
 const root = document.documentElement;
+
+// Initialize theme from localStorage immediately
+try {
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme === "dark" || (!savedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+    root.classList.add("dark");
+  } else if (savedTheme === "light") {
+    root.classList.remove("dark");
+  }
+} catch { }
+
 const modeBtn = document.getElementById("mode-toggle");
 
 function updateModeIcon() {
