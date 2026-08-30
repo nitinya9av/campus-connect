@@ -20,7 +20,6 @@ Campus Connect eliminates the daily hassle of repeatedly typing mobile credentia
 | **Windows** | `.msix` | **[GitHub Releases](https://github.com/nitinya9av/campus-connect/releases/latest)** | Modern packaged Windows application. Native 1-click install, start menu integration, and clean sandbox. |
 | **Windows** | `.exe` | **[GitHub Releases](https://github.com/nitinya9av/campus-connect/releases/latest)** | Portable standalone client (~26 KB). Zero installation, zero admin rights, runs in user-space. |
 | **macOS** | `Script / launchd` | **[1-Line Terminal Command](mac/)** | Native user-space background service via Apple's built-in `launchd`. Zero GUI overhead. |
-| **iOS** | `Apple Shortcut` | **[Shortcuts Automation](ios/)** | Native iOS Shortcuts automation. Zero app installation needed; triggers automatically upon Wi-Fi association. |
 | **Web Portal** | Static Site | **[nitinyadav.xyz/campus-connect](https://nitinyadav.xyz/campus-connect/)** | Minimalist editorial portal with setup instructions, status diagnostics, and privacy documentation. |
 
 ---
@@ -33,7 +32,6 @@ Campus Connect eliminates the daily hassle of repeatedly typing mobile credentia
   - **Windows**: Hooks directly into native OS network events (`NetworkChange.NetworkAddressChanged`) for 0ms wakeup the exact moment Wi-Fi associates.
   - **macOS**: Native user-space `launchd` LaunchAgent triggered instantly on network state changes.
   - **Android**: Lightweight native foreground service running with `IMPORTANCE_MIN` for seamless 24/7 background session maintenance without battery drain.
-  - **iOS**: Apple Shortcuts native Wi-Fi personal automation for silent, background authentication.
 - **🔐 Local-Only Security**: All credentials are encrypted and stored strictly on your local device (`EncryptedSharedPreferences` on Android, `%APPDATA%\CURAJ_Connect\config.json` on Windows, `~/.curaj-connect/config.json` on macOS). Zero external telemetry, tracking, or remote analytics.
 - **🧹 1-Click Clean Deregistration**: Tap or run **Deregister / Uninstall** anytime to stop all services and permanently erase stored credentials from your device.
 
@@ -88,8 +86,6 @@ curaj-wifi/
 │   ├── campus-connect.sh             <- Native macOS shell client & launchd daemon
 │   ├── install.sh                    <- 1-line Terminal installer script
 │   └── README.md                     <- macOS documentation & manual commands
-├── ios/
-│   └── README.md                     <- Native Apple Shortcuts automation setup guide
 ├── mobile/                           <- React Native & Native Android codebase
 │   ├── App.js                        <- Cross-platform mobile UI & registration screen
 │   ├── src/                          <- Shared API, storage, and theme utilities
@@ -121,16 +117,6 @@ curl -sSL https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac
 
 - Wakes up in **0ms** using macOS native `launchd` service when Wi-Fi connects.
 - To uninstall anytime: `~/.curaj-connect/campus-connect.sh --uninstall`
-
----
-
-## iOS (iPhone & iPad) Setup via Apple Shortcuts
-
-No App Store download or third-party background software required:
-1. Open the built-in **Shortcuts** app on your iPhone &rarr; tap the **Automation** tab &rarr; tap **`+`**.
-2. Select **Wi-Fi**, choose **`CURAJ-WIFI`**, set to **Run Immediately** (toggle off *Notify When Run*).
-3. Add **Get Contents of URL** action (POST to `http://122.252.242.93/userportal/newlogin.do` with your credentials).
-4. See the [Complete iOS Shortcuts Guide](ios/README.md) for full step-by-step instructions.
 
 ---
 

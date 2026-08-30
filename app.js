@@ -21,7 +21,7 @@ if (modeBtn) {
 }
 updateModeIcon();
 
-// Tab Switcher (Windows / Android / macOS / iOS)
+// Tab Switcher (Windows / Android / macOS)
 function switchTab(os) {
   document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
@@ -35,9 +35,7 @@ function switchTab(os) {
 // Auto-detect default tab based on user operating system
 function initDefaultTab() {
   const ua = navigator.userAgent;
-  if (/iPhone|iPad|iPod/i.test(ua)) {
-    switchTab('ios');
-  } else if (/Android/i.test(ua)) {
+  if (/Android/i.test(ua)) {
     switchTab('android');
   } else if (/Macintosh|Mac OS X/i.test(ua)) {
     switchTab('macos');
