@@ -43,9 +43,6 @@
         <button id="tab-btn-macos" class="nav-item" onclick="switchTab('macos')">
           macos
         </button>
-        <a href="#security" class="nav-item">
-          security
-        </a>
         <button id="mode-toggle" class="mode-toggle" type="button" aria-label="Toggle dark mode" title="Toggle theme">
           ☾
         </button>
@@ -236,7 +233,8 @@
             <div
               style="position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; display: flex; align-items: center; overflow: hidden;">
               <div style="overflow-x: auto; padding: 0.85rem 5.5rem 0.85rem 1rem; width: 100%; white-space: nowrap;">
-                <code style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent);">curl -sSL https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac/install.sh | bash</code>
+                <code
+                  style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent);">curl -sSL https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac/install.sh | bash</code>
               </div>
               <button type="button" class="btn btn-outline"
                 style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); padding: 0.35rem 0.75rem; font-size: 0.75rem; border: 1px solid var(--border); background: var(--surface); cursor: pointer; z-index: 2; box-shadow: -10px 0 16px var(--surface);"
@@ -253,7 +251,8 @@
           <ul class="step-list">
             <li>
               <span class="num">01</span>
-              <span class="desc">Open <strong>Terminal</strong> on your Mac (Press <code>Cmd + Space</code>, type <code>Terminal</code>, and hit Enter).</span>
+              <span class="desc">Open <strong>Terminal</strong> on your Mac (Press <code>Cmd + Space</code>, type
+                <code>Terminal</code>, and hit Enter).</span>
             </li>
             <li>
               <span class="num">02</span>
@@ -261,12 +260,14 @@
             </li>
             <li>
               <span class="num">03</span>
-              <span class="desc">Enter your campus Mobile Number and Password when prompted. The background daemon starts immediately!</span>
+              <span class="desc">Enter your campus Mobile Number and Password when prompted. The background daemon
+                starts immediately!</span>
             </li>
           </ul>
 
           <div class="notice-note">
-            <strong>1-Click Uninstall:</strong> Run <code>~/.curaj-connect/campus-connect.sh --uninstall</code> anytime in Terminal to completely stop the daemon and erase saved credentials.
+            <strong>1-Click Uninstall:</strong> Run <code>~/.curaj-connect/campus-connect.sh --uninstall</code> anytime
+            in Terminal to completely stop the daemon and erase saved credentials.
           </div>
         </section>
       </div>
