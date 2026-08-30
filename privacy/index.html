@@ -9,6 +9,7 @@
     content="Privacy Policy for Campus Connect (Android & Windows). Zero telemetry, 100% client-side, local credential storage only.">
   <link rel="icon" type="image/png" href="../favicon.png">
   <link rel="apple-touch-icon" href="../favicon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="stylesheet" href="../style.css">
   <style>
     .policy-header {
@@ -116,7 +117,7 @@
         <a href="../" class="back-link">&larr; back to portal</a>
         <h1 class="policy-title">Privacy Policy</h1>
         <div class="policy-meta">
-          Application: Campus Connect
+          Application: Campus Connect &middot; Package: <code>com.niitnydv.campusconnect</code> &middot; Google Play: <a href="https://play.google.com/store/apps/details?id=com.niitnydv.campusconnect" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: underline;">Play Store</a>
         </div>
       </div>
 
@@ -176,8 +177,16 @@
       <div class="policy-section">
         <h2>04 &middot; Android Device Permissions</h2>
         <p>
-          The Android application requests only the minimum set of permissions necessary to function:
+          The Android application requests only the minimum set of network permissions necessary to function, and requires <strong>zero sensitive personal permissions</strong>:
         </p>
+        <div class="policy-card" style="border-left: 3px solid var(--accent); margin: 0.85rem 0 1.25rem;">
+          <strong style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--foreground); text-transform: uppercase; letter-spacing: 0.05em;">
+            Zero Sensitive Permissions:
+          </strong>
+          <p style="color: var(--muted); font-size: 0.875rem; line-height: 1.6; margin-top: 0.4rem; margin-bottom: 0;">
+            The app does <strong>NOT</strong> request access to your <strong>Location, Camera, Microphone, Contacts, SMS, Photos, or Storage</strong>.
+          </p>
+        </div>
         <ul>
           <li><code>INTERNET</code> &mdash; Required to send HTTP authentication requests to the campus gateway and
             verify internet access.</li>
@@ -252,8 +261,7 @@
     <div class="page-column">
       <ul class="footer-links">
         <li><a href="../">home</a></li>
-        <li><a href="https://github.com/nitinya9av/campus-connect" target="_blank" rel="noopener" class="ext">github</a>
-        </li>
+        <li><a href="https://github.com/nitinya9av/campus-connect" target="_blank" rel="noopener" class="ext"><i class="fa-brands fa-github"></i> github</a></li>
         <li><a href="./" style="color: var(--accent);">privacy policy</a></li>
       </ul>
       <p>campus connect &middot; open source</p>

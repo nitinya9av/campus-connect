@@ -18,6 +18,8 @@
       } catch { }
     })();
   </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="stylesheet" href="style.css">
 </head>
 
@@ -58,7 +60,7 @@
         <div class="hero-standfirst">
           <p>
             Automates the captive portal login for Central University of Rajasthan.
-            Client-side, zero admin required, and reversible in one click.
+            Client-side, zero admin required, and reversible in one click. Available for Windows &amp; Android.
           </p>
         </div>
       </section> <!-- WINDOWS SECTION -->
@@ -76,7 +78,8 @@
 
           <div style="margin-bottom: 1.75rem;">
             <a href="https://github.com/nitinya9av/campus-connect/releases/latest/download/campus-connect.exe"
-              class="btn btn-primary" style="padding: 0.75rem 1.65rem; font-size: 0.9rem;">
+              class="btn btn-primary" style="padding: 0.75rem 1.65rem; font-size: 0.9rem; gap: 0.65rem;">
+              <i class="fa-brands fa-windows" style="font-size: 1.05rem;"></i>
               Download Windows App (.exe)
             </a>
             <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--faint); margin-top: 0.5rem;">
@@ -117,20 +120,86 @@
       <!-- ANDROID SECTION -->
       <div id="panel-android" class="tab-panel">
         <section class="content-section">
-          <h2 class="section-label">Android App &middot; In Development</h2>
+          <h2 class="section-label">Android &middot; Google Play Store</h2>
           <p
-            style="color: var(--foreground); font-size: 1.05rem; font-family: var(--font-serif); font-weight: 500; margin-bottom: 0.75rem;">
-            A lightweight, dedicated Android app is currently under construction.
+            style="color: var(--foreground); font-size: 1.1rem; font-family: var(--font-serif); font-weight: 500; margin-bottom: 0.4rem;">
+            Zero-click background Wi-Fi auto-login for your Android phone.
           </p>
-          <p style="color: var(--muted); font-size: 0.9rem; line-height: 1.65; max-width: 52ch;">
-            No third-party automation tools or complex setup. Just install the app, enter your credentials once, and you
-            are connected forever. Want to stop? Simply uninstall the app to completely deregister.
+          <p style="color: var(--muted); font-size: 0.9rem; line-height: 1.65; max-width: 52ch; margin-bottom: 1.5rem;">
+            Install directly from the Google Play Store. Enter your credentials once, and Campus Connect keeps you
+            authenticated automatically in the background whenever you connect to CURAJ Wi-Fi across hostels, academic
+            departments, or the library.
           </p>
 
-          <div class="notice-note" style="margin-top: 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem;">
-            <span
-              style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background-color: var(--accent);"></span>
-            <span>Coming soon &middot; under construction</span>
+          <div style="margin-bottom: 1.75rem;">
+            <a href="https://play.google.com/store/apps/details?id=com.niitnydv.campusconnect" target="_blank"
+              rel="noopener" class="btn btn-primary" style="padding: 0.75rem 1.65rem; font-size: 0.9rem; gap: 0.65rem;">
+              <i class="fa-brands fa-google-play" style="font-size: 1.15rem;"></i>
+              Get it on Google Play
+            </a>
+            <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--faint); margin-top: 0.5rem;">
+              v1.0 &middot; Google Play Store &middot; Free & Open Source
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.85rem;">
+              <span
+                style="display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--font-mono); font-size: 0.72rem; background: var(--surface); border: 1px solid var(--border); padding: 0.2rem 0.55rem; border-radius: 2px; color: var(--muted);">
+                <i class="fa-solid fa-ban" style="color: var(--accent); font-size: 0.68rem;"></i> No Location
+              </span>
+              <span
+                style="display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--font-mono); font-size: 0.72rem; background: var(--surface); border: 1px solid var(--border); padding: 0.2rem 0.55rem; border-radius: 2px; color: var(--muted);">
+                <i class="fa-solid fa-ban" style="color: var(--accent); font-size: 0.68rem;"></i> No Contacts
+              </span>
+              <span
+                style="display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--font-mono); font-size: 0.72rem; background: var(--surface); border: 1px solid var(--border); padding: 0.2rem 0.55rem; border-radius: 2px; color: var(--muted);">
+                <i class="fa-solid fa-ban" style="color: var(--accent); font-size: 0.68rem;"></i> No Files / Photos
+              </span>
+              <span
+                style="display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--font-mono); font-size: 0.72rem; background: var(--surface); border: 1px solid var(--border); padding: 0.2rem 0.55rem; border-radius: 2px; color: var(--muted);">
+                <i class="fa-solid fa-shield-halved" style="color: var(--accent); font-size: 0.68rem;"></i> Zero
+                Tracking
+              </span>
+            </div>
+          </div>
+
+          <!-- Zero Sensitive Permissions Highlight Card -->
+          <div
+            style="background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); padding: 1.15rem 1.35rem; border-radius: 4px; margin: 1.75rem 0 2rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem;">
+              <i class="fa-solid fa-lock" style="color: var(--accent); font-size: 0.95rem;"></i>
+              <strong
+                style="font-family: var(--font-mono); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--foreground);">
+                Zero Sensitive Permissions &middot; 100% Safe for Students
+              </strong>
+            </div>
+            <p style="color: var(--muted); font-size: 0.875rem; line-height: 1.65; margin: 0;">
+              Campus Connect requests <strong>zero sensitive device permissions</strong>. It cannot access your
+              <strong>location, photos, files, contacts, camera, or microphone</strong>. It only uses standard local
+              network communication to send captive portal login requests directly to the university gateway
+              (<code>122.252.242.93</code>).
+            </p>
+          </div>
+
+          <h2 class="section-label" style="margin-top: 1.5rem;">Setup Guide</h2>
+          <ul class="step-list">
+            <li>
+              <span class="num">01</span>
+              <span class="desc">Install <strong>Campus Connect</strong> from the Google Play Store.</span>
+            </li>
+            <li>
+              <span class="num">02</span>
+              <span class="desc">Enter your Mobile Number and Password, then tap <strong>Login &amp;
+                  Register</strong>.</span>
+            </li>
+            <li>
+              <span class="num">03</span>
+              <span class="desc">Done! Your phone will now reconnect and authenticate automatically whenever connected
+                to CURAJ Wi-Fi. To stop, tap <strong>Deregister</strong> anytime.</span>
+            </li>
+          </ul>
+
+          <div class="notice-note">
+            <strong>Zero Sensitive Permissions &amp; 100% Private:</strong> Credentials remain encrypted solely in your
+            phone's private storage and are communicated only to the local CURAJ gateway.
           </div>
         </section>
       </div>
@@ -165,8 +234,8 @@
   <footer>
     <div class="page-column">
       <ul class="footer-links">
-        <li><a href="https://github.com/nitinya9av/campus-connect" target="_blank" rel="noopener" class="ext">github</a>
-        </li>
+        <li><a href="https://github.com/nitinya9av/campus-connect" target="_blank" rel="noopener" class="ext"><i
+              class="fa-brands fa-github"></i> github</a></li>
         <li><a href="privacy/">privacy policy</a></li>
       </ul>
       <p>campus connect &middot; open source</p>
