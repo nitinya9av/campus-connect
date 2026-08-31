@@ -1,4 +1,4 @@
-android/
+/android/
 __pycache__/
 *.pyc
 *.exe

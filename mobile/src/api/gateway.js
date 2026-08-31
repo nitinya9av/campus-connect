@@ -37,9 +37,34 @@ export async function checkInternetAccess(timeoutMs = 3000) {
 }
 
 /**
+ * Checks if device is physically on the CURAJ local campus subnet by probing the Inventum NAS (1.254.254.254).
+ * This IP is private to the CURAJ network and cannot be reached over mobile data or external Wi-Fi.
+ */
+export async function isCampusLocalNetwork(timeoutMs = 1500) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    const resNas = await fetch(NAS_URL, {
+      method: 'GET',
+      headers: { 'Cache-Control': 'no-cache' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    return resNas.ok || resNas.status === 200 || resNas.status === 302;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Checks if the CURAJ captive portal gateway or NAS is reachable on the local network.
  */
 export async function isGatewayReachable(timeoutMs = 3000) {
+  // First check the local NAS which is strictly on CURAJ Wi-Fi
+  const isNas = await isCampusLocalNetwork(1500);
+  if (isNas) return true;
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -52,12 +77,7 @@ export async function isGatewayReachable(timeoutMs = 3000) {
     clearTimeout(timeout);
     return res.ok || res.status === 200 || res.status === 302;
   } catch (err) {
-    try {
-      const resNas = await fetch(NAS_URL, { method: 'GET' });
-      return resNas.ok || resNas.status === 200;
-    } catch {
-      return false;
-    }
+    return false;
   }
 }
 
@@ -67,6 +87,7 @@ export async function isGatewayReachable(timeoutMs = 3000) {
 export async function loginToGateway(username, password, timeoutMs = 8000) {
   try {
     let sessionCookie = '';
+    let isCurajLan = false;
 
     // 1. Prime session with Inventum NAS controller (triggers client MAC/IP registration)
     try {
@@ -79,6 +100,7 @@ export async function loginToGateway(username, password, timeoutMs = 8000) {
       });
       clearTimeout(nasTimeout);
       const nasHtml = await nasRes.text();
+      isCurajLan = true;
 
       // Extract the Inventum redirect URL: URL=http://122.252.242.93/userportal/?...
       const urlMatch = nasHtml.match(/URL=(http:\/\/[^"'>\s]+)/i);
@@ -110,10 +132,14 @@ export async function loginToGateway(username, password, timeoutMs = 8000) {
         }
       }
     } catch (e) {
-      // NAS probe failed, proceed to direct login or check if already online
+      // NAS probe failed, device is NOT on CURAJ local network
       const alreadyOnline = await checkInternetAccess(1000);
       if (alreadyOnline) {
-        return { success: true, message: 'Already connected to campus internet.' };
+        return {
+          success: false,
+          isExternal: true,
+          message: 'Connected to an external network with active internet. Connect to CURAJ Wi-Fi to use campus login.',
+        };
       }
     }
 
@@ -175,9 +201,9 @@ export async function loginToGateway(username, password, timeoutMs = 8000) {
     };
   } catch (err) {
     if (err.name === 'AbortError') {
-      return { success: false, message: 'Gateway request timed out.' };
+      return { success: false, isUnreachable: true, message: 'CURAJ gateway timed out. Please connect to CURAJ Campus Wi-Fi to authenticate.' };
     }
-    return { success: false, message: 'Could not reach gateway: ' + err.message };
+    return { success: false, isUnreachable: true, message: 'CURAJ gateway unreachable. Please ensure you are connected to CURAJ Campus Wi-Fi.' };
   }
 }
 
