@@ -202,7 +202,7 @@ function CampusConnectMain() {
         setIsRegistered(true);
 
         if (Platform.OS === 'android' && CampusConnectModule?.startBackgroundService) {
-          CampusConnectModule.startBackgroundService(creds.username, creds.password).catch(() => {});
+          CampusConnectModule.startBackgroundService(creds.username, creds.password).catch(() => { });
         }
 
         if (env.type === 'curaj_wifi') {
@@ -472,7 +472,7 @@ function CampusConnectMain() {
 
     // Start native 24/7 background service
     if (Platform.OS === 'android' && CampusConnectModule?.startBackgroundService) {
-      CampusConnectModule.startBackgroundService(username, password).catch(() => {});
+      CampusConnectModule.startBackgroundService(username, password).catch(() => { });
     }
 
     setStatusMessage({
@@ -523,7 +523,7 @@ function CampusConnectMain() {
           onPress: async () => {
             await clearCredentials();
             if (Platform.OS === 'android' && CampusConnectModule?.stopBackgroundService) {
-              CampusConnectModule.stopBackgroundService().catch(() => {});
+              CampusConnectModule.stopBackgroundService().catch(() => { });
             }
             setUsername('');
             setPassword('');
@@ -617,128 +617,149 @@ function CampusConnectMain() {
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: Math.max(insets.bottom, 16) + 32 },
+            { paddingBottom: Math.max(insets.bottom, 12) },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-
           {/* Body Container */}
           <View style={styles.container}>
-            {/* Section 01: Credentials */}
-            <Text style={styles.sectionLabel}>01 • CREDENTIALS</Text>
-            <View style={styles.card}>
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>MOBILE NUMBER (USERNAME)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. 9876543210"
-                  placeholderTextColor={colors.faint}
-                  value={username}
-                  onChangeText={handleUsernameChange}
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                  editable={!isLoading}
-                />
-              </View>
-
-              <View style={[styles.fieldGroup, { marginTop: 18 }]}>
-                <View style={styles.passwordLabelRow}>
-                  <Text style={styles.fieldLabel}>WI-FI PASSWORD</Text>
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Text style={styles.toggleText}>
-                      {showPassword ? 'HIDE' : 'SHOW'}
-                    </Text>
-                  </TouchableOpacity>
+            <View style={styles.mainContent}>
+              {/* Section 01: Credentials */}
+              <Text style={styles.sectionLabel}>01 • CREDENTIALS</Text>
+              <View style={styles.card}>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>MOBILE NUMBER (USERNAME)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 9876543210"
+                    placeholderTextColor={colors.faint}
+                    value={username}
+                    onChangeText={handleUsernameChange}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    editable={!isLoading}
+                  />
                 </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter Wi-Fi password"
-                  placeholderTextColor={colors.faint}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  editable={!isLoading}
-                />
+
+                <View style={[styles.fieldGroup, { marginTop: 18 }]}>
+                  <View style={styles.passwordLabelRow}>
+                    <Text style={styles.fieldLabel}>WI-FI PASSWORD</Text>
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Text style={styles.toggleText}>
+                        {showPassword ? 'HIDE' : 'SHOW'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter Wi-Fi password"
+                    placeholderTextColor={colors.faint}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    editable={!isLoading}
+                  />
+                </View>
               </View>
-            </View>
 
-            {/* Section 02: Actions */}
-            <Text style={styles.sectionLabel}>02 • SETUP & CONTROLS</Text>
+              {/* Section 02: Actions */}
+              <Text style={styles.sectionLabel}>02 • SETUP & CONTROLS</Text>
 
-            <TouchableOpacity
-              style={[styles.primaryButton, isLoading && { opacity: 0.7 }]}
-              onPress={handleRegister}
-              disabled={isLoading}
-              activeOpacity={0.85}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.primaryButtonText}>
-                  {isRegistered ? 'Update & Reconnect' : 'Register Auto-Login'}
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.actionRow}>
               <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={handleTestConnection}
+                style={[styles.primaryButton, isLoading && { opacity: 0.7 }]}
+                onPress={handleRegister}
                 disabled={isLoading}
-                activeOpacity={0.8}
+                activeOpacity={0.85}
               >
-                <Text style={styles.secondaryButtonText}>Test Connection</Text>
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>
+                    {isRegistered ? 'Update & Reconnect' : 'Register Auto-Login'}
+                  </Text>
+                )}
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.secondaryButton, { borderColor: colors.border }]}
-                onPress={handleDeregister}
-                disabled={isLoading}
-                activeOpacity={0.8}
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={styles.secondaryButton}
+                  onPress={handleTestConnection}
+                  disabled={isLoading}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.secondaryButtonText}>Test Connection</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.secondaryButton, { borderColor: colors.border }]}
+                  onPress={handleDeregister}
+                  disabled={isLoading}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.secondaryButtonText,
+                      { color: isRegistered ? colors.text : colors.muted },
+                    ]}
+                  >
+                    Deregister
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Live Feedback Card */}
+              <View
+                style={[
+                  styles.feedbackCard,
+                  statusMessage.type === 'success' && styles.feedbackSuccess,
+                  statusMessage.type === 'error' && styles.feedbackError,
+                ]}
               >
                 <Text
                   style={[
-                    styles.secondaryButtonText,
-                    { color: isRegistered ? colors.text : colors.muted },
+                    styles.feedbackText,
+                    statusMessage.type === 'success' && styles.feedbackTextSuccess,
+                    statusMessage.type === 'error' && styles.feedbackTextError,
                   ]}
                 >
-                  Deregister
+                  {statusMessage.text}
                 </Text>
-              </TouchableOpacity>
+              </View>
             </View>
 
-            {/* Live Feedback Card */}
-            <View
-              style={[
-                styles.feedbackCard,
-                statusMessage.type === 'success' && styles.feedbackSuccess,
-                statusMessage.type === 'error' && styles.feedbackError,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.feedbackText,
-                  statusMessage.type === 'success' && styles.feedbackTextSuccess,
-                  statusMessage.type === 'error' && styles.feedbackTextError,
-                ]}
-              >
-                {statusMessage.text}
-              </Text>
-            </View>
-
-            {/* Editorial Footer */}
+            {/* Editorial Footer (Pinned to bottom) */}
             <View style={styles.footer}>
+              {/* Sponsor Callout */}
+              <View style={styles.sponsorRow}>
+                <Text style={styles.sponsorText}>
+                  If you want this app to keep running, you can{' '}
+                </Text>
+                <TouchableOpacity
+                  style={styles.sponsorBtn}
+                  onPress={() => Linking.openURL('https://nitinyadav.xyz/campus-connect/support')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.sponsorHeart}>♥</Text>
+                  <Text style={styles.sponsorBtnText}>Sponsor</Text>
+                </TouchableOpacity>
+                <Text style={styles.sponsorText}> to support us.</Text>
+              </View>
+
+              {/* Separator between Sponsor & Footer */}
+              <View style={styles.footerDivider} />
+
               <Text style={styles.footerText}>
                 100% Client-Side & Local • Zero Telemetry • Open Source
               </Text>
               <TouchableOpacity
                 onPress={() => Linking.openURL('https://nitinyadav.xyz/campus-connect/privacy')}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={{ marginTop: 8 }}
+                style={{ marginTop: 5 }}
               >
                 <Text style={[styles.footerText, { color: colors.muted, textDecorationLine: 'underline' }]}>
                   Privacy Policy
@@ -758,7 +779,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   scrollContent: {
-    paddingBottom: 40,
+    flexGrow: 1,
   },
   header: {
     backgroundColor: colors.surface,
@@ -853,8 +874,13 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   container: {
+    flex: 1,
     paddingHorizontal: 20,
     paddingTop: 24,
+    justifyContent: 'space-between',
+  },
+  mainContent: {
+    flexShrink: 0,
   },
   sectionLabel: {
     fontSize: 11,
@@ -969,7 +995,50 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 16,
+  },
+  sponsorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 10,
+  },
+  footerDivider: {
+    alignSelf: 'stretch',
+    height: 1,
+    backgroundColor: colors.border,
+    marginBottom: 10,
+  },
+  sponsorText: {
+    fontSize: 11.5,
+    color: colors.muted,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  sponsorBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: '#ea4aaa',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginHorizontal: 4,
+  },
+  sponsorHeart: {
+    color: '#ea4aaa',
+    fontSize: 10,
+    marginRight: 4,
+  },
+  sponsorBtnText: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    letterSpacing: -0.2,
   },
   footerText: {
     fontSize: 10.5,
