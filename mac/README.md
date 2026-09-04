@@ -15,10 +15,12 @@ Native, lightweight Wi-Fi auto-login daemon for MacBooks and iMacs on the Centra
 
 ## 1-Line Terminal Install
 
+> **Note**: Connect your Mac to the internet (via mobile hotspot or log into campus Wi-Fi once in your browser) so Terminal can download the setup files from GitHub.
+
 Open **Terminal** on your Mac (Press `Cmd + Space`, type `Terminal`, and press `Enter`), then paste:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac/install.sh | bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac/install.sh)"
 ```
 
 The script will prompt for your Mobile Number and Password, configure the `launchd` service, and verify your connection immediately.
@@ -29,6 +31,7 @@ The script will prompt for your Mobile Number and Password, configure the `launc
 
 | Command | Action |
 | :--- | :--- |
+| `~/.curaj-connect/campus-connect.sh --status` | Checks background daemon health & network connectivity. |
 | `~/.curaj-connect/campus-connect.sh --login` | Tests immediate one-shot login. |
 | `~/.curaj-connect/campus-connect.sh --uninstall` | Completely disables the background daemon and erases credentials. |
 | `~/.curaj-connect/campus-connect.sh --install <user> <pass>` | Reconfigures credentials and starts the daemon. |
