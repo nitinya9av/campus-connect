@@ -243,11 +243,11 @@
               style="position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; display: flex; align-items: center; overflow: hidden;">
               <div style="overflow-x: auto; padding: 0.85rem 5.5rem 0.85rem 1rem; width: 100%; white-space: nowrap;">
                 <code
-                  style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent);">/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac/install.sh)"</code>
+                  style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent);">curl -#fL https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac/install.sh | bash</code>
               </div>
               <button type="button" class="btn btn-outline"
                 style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); padding: 0.35rem 0.75rem; font-size: 0.75rem; border: 1px solid var(--border); background: var(--surface); cursor: pointer; z-index: 2; box-shadow: -10px 0 16px var(--surface);"
-                onclick="navigator.clipboard.writeText('/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac/install.sh)&quot;'); this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy', 2000);">
+                onclick="navigator.clipboard.writeText('curl -#fL https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac/install.sh | bash'); this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy', 2000);">
                 Copy
               </button>
             </div>
@@ -270,12 +270,14 @@
             </li>
             <li>
               <span class="num">03</span>
-              <span class="desc">Paste the command above and press <strong>Enter</strong>.</span>
+              <span class="desc">Paste the command above and press <strong>Enter</strong>. A download progress
+                bar appears briefly, then the installer launches automatically.</span>
             </li>
             <li>
               <span class="num">04</span>
-              <span class="desc">Enter your campus Mobile Number and Password when prompted. The background daemon
-                is registered and starts immediately!</span>
+              <span class="desc">Enter your campus Mobile Number and Password when prompted. Your password is
+                masked with <code>•</code> dots as you type. The background daemon is registered and starts
+                immediately!</span>
             </li>
           </ul>
 

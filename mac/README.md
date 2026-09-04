@@ -20,10 +20,11 @@ Native, lightweight Wi-Fi auto-login daemon for MacBooks and iMacs on the Centra
 Open **Terminal** on your Mac (Press `Cmd + Space`, type `Terminal`, and press `Enter`), then paste:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac/install.sh)"
+curl -#fL https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac/install.sh | bash
 ```
 
-The script will prompt for your Mobile Number and Password, configure the `launchd` service, and verify your connection immediately.
+A download progress bar (`######`) will appear briefly, then the installer launches and prompts for your Mobile Number and Password (masked with `•` dots as you type). The `launchd` background daemon is configured and started immediately.
+
 
 ---
 

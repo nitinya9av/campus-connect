@@ -52,9 +52,8 @@ read_password() {
 }
 
 # ─── Banner ───────────────────────────────────────────────────────────────────
-clear
 echo ""
-echo -e "  ${BOLD}Campus Connect${RESET}  ${MUTED}·  macOS Installer${RESET} ·  CURAJ Wi-Fi${RESET}"
+echo -e "  ${BOLD}Campus Connect${RESET}  ${MUTED}·  macOS Installer  ·  CURAJ Wi-Fi${RESET}"
 rule
 echo ""
 
@@ -90,10 +89,10 @@ ok "~/.curaj-connect ready"
 PRIMARY_URL="https://raw.githubusercontent.com/nitinya9av/campus-connect/master/mac/campus-connect.sh"
 MIRROR_URL="https://cdn.jsdelivr.net/gh/nitinya9av/campus-connect@master/mac/campus-connect.sh"
 
-label "Downloading client"
-if ! curl -fsSL --connect-timeout 8 "$PRIMARY_URL" -o "$SCRIPT_PATH" 2>/dev/null; then
+echo -e "  ${MUTED}Downloading campus-connect.sh...${RESET}"
+if ! curl -#fL --connect-timeout 8 "$PRIMARY_URL" -o "$SCRIPT_PATH"; then
     warn "Primary slow — retrying mirror..."
-    curl -fsSL --connect-timeout 12 "$MIRROR_URL" -o "$SCRIPT_PATH"
+    curl -#fL --connect-timeout 12 "$MIRROR_URL" -o "$SCRIPT_PATH"
 fi
 chmod 755 "$SCRIPT_PATH"
 ok "campus-connect.sh downloaded"
