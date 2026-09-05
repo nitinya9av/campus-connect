@@ -144,4 +144,19 @@ class CampusConnectModule(private val reactContext: ReactApplicationContext) :
             promise.reject("AUTH_ERROR", e.message, e)
         }
     }
+
+    @ReactMethod
+    fun reportNetworkConnectivity(promise: Promise) {
+        try {
+            val context = reactContext
+            val wifiNetwork = CampusConnectCore.getWifiNetwork(context)
+            if (wifiNetwork != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+                cm?.reportNetworkConnectivity(wifiNetwork, true)
+            }
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.reject("REPORT_FAILED", e.message, e)
+        }
+    }
 }

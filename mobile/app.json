@@ -2,7 +2,7 @@
   "expo": {
     "name": "Campus Connect",
     "slug": "campus-connect",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.niitnydv.campusconnect",
-      "versionCode": 2,
+      "versionCode": 3,
       "usesCleartextTraffic": true,
       "permissions": [
         "ACCESS_NETWORK_STATE",
