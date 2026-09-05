@@ -38,13 +38,28 @@ function CampusConnectMain() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
-  const [networkState, setNetworkState] = useState('checking'); // 'online', 'external', 'login_needed', 'offline', 'checking'
+  // networkState values:
+  //   'checking'      — initial probe in progress
+  //   'online'        — registered + authenticated + internet confirmed
+  //   'unregistered'  — on CURAJ WiFi but no credentials saved yet (Issue 1)
+  //   'login_needed'  — registered, on CURAJ WiFi, but captive portal not yet open
+  //   'no_internet'   — WiFi hardware up but gateway/ISP down, internet fully absent (Issue 2)
+  //   'external'      — cellular or non-CURAJ WiFi
+  //   'offline'       — no network at all
+  const [networkState, setNetworkState] = useState('checking');
+  const networkStateRef = useRef('checking');
+  // Keep ref in sync — lets interval callbacks read latest state without stale closures
+  const setNetwork = useCallback((val) => {
+    networkStateRef.current = val;
+    setNetworkState(val);
+  }, []);
   const [statusMessage, setStatusMessage] = useState({
     type: 'neutral', // 'success', 'error', 'neutral'
     text: 'Initializing Campus Connect...',
   });
 
   const isAuthenticatingRef = useRef(false);
+  const isRegisteredRef = useRef(false); // mirrors isRegistered — safe to read in async callbacks
   const usernameRef = useRef(username);
   const passwordRef = useRef(password);
 
@@ -55,6 +70,10 @@ function CampusConnectMain() {
   useEffect(() => {
     passwordRef.current = password;
   }, [password]);
+
+  useEffect(() => {
+    isRegisteredRef.current = isRegistered;
+  }, [isRegistered]);
 
   // Intelligent Network Environment Detector: accurately identifies CURAJ Wi-Fi even when Mobile Data is active
   const detectEnvironment = useCallback(async () => {
@@ -122,7 +141,7 @@ function CampusConnectMain() {
     const env = await detectEnvironment();
 
     if (env.type === 'offline') {
-      setNetworkState('offline');
+      setNetwork('offline');
       setStatusMessage({
         type: 'error',
         text: '⚠ Device is offline. Please turn on Wi-Fi.',
@@ -131,7 +150,7 @@ function CampusConnectMain() {
     }
 
     if (env.type === 'cellular') {
-      setNetworkState('external');
+      setNetwork('external');
       setStatusMessage({
         type: 'neutral',
         text: 'Connected via mobile data. Campus auto-login requires CURAJ Wi-Fi.',
@@ -140,7 +159,7 @@ function CampusConnectMain() {
     }
 
     if (env.type === 'external_wifi') {
-      setNetworkState('external');
+      setNetwork('external');
       setStatusMessage({
         type: 'neutral',
         text: `Connected to "${env.ssid}". CURAJ auto-login is active on campus Wi-Fi.`,
@@ -151,7 +170,7 @@ function CampusConnectMain() {
     // We are on CURAJ campus Wi-Fi! (Even if Mobile Data is also ON)
     isAuthenticatingRef.current = true;
     setIsLoading(true);
-    setNetworkState('connecting');
+    setNetwork('connecting');
     setStatusMessage({
       type: 'neutral',
       text: `Authenticating with CURAJ Wi-Fi (${env.ssid || 'CURAJ CAMPUS CONNECT'})...`,
@@ -166,18 +185,25 @@ function CampusConnectMain() {
       }
 
       if (res.success) {
-        setNetworkState('online');
+        setNetwork('online');
         setStatusMessage({
           type: 'success',
           text: '✓ ' + res.message,
         });
+        // Issue 3: Notify Android's ConnectivityService that the captive portal is
+        // resolved. This clears the "Sign in required" notification bar entry on
+        // phones where Android's own probe hasn't re-run yet.
+        if (Platform.OS === 'android' && CampusConnectModule?.reportNetworkConnectivity) {
+          CampusConnectModule.reportNetworkConnectivity().catch(() => {});
+        }
       } else {
         if (res.isExternal) {
-          setNetworkState('external');
+          setNetwork('external');
         } else if (res.isUnreachable) {
-          setNetworkState('offline');
+          // Gateway timed out entirely — WiFi up but internet is down (Issue 2)
+          setNetwork('no_internet');
         } else {
-          setNetworkState('login_needed');
+          setNetwork('login_needed');
         }
         setStatusMessage({
           type: 'error',
@@ -191,10 +217,11 @@ function CampusConnectMain() {
   }, [detectEnvironment]);
 
   // 1. Startup trigger: load credentials & verify exact network environment
+  // Run both in parallel — credentials come from local AsyncStorage (fast) and
+  // should NOT wait on slow network probes (NAS/internet timeouts).
   useEffect(() => {
     (async () => {
-      const env = await detectEnvironment();
-      const creds = await getCredentials();
+      const [env, creds] = await Promise.all([detectEnvironment(), getCredentials()]);
 
       if (creds && creds.username && creds.password) {
         setUsername(creds.username);
@@ -208,48 +235,48 @@ function CampusConnectMain() {
         if (env.type === 'curaj_wifi') {
           await runAutoLogin(creds.username, creds.password, 'startup');
         } else if (env.type === 'offline') {
-          setNetworkState('offline');
+          setNetwork('offline');
           setStatusMessage({
             type: 'neutral',
             text: 'Device is offline. Turn on Wi-Fi to connect.',
           });
         } else if (env.type === 'cellular') {
-          setNetworkState('external');
+          setNetwork('external');
           setStatusMessage({
             type: 'neutral',
             text: 'Connected via mobile data. Auto-login runs on CURAJ Wi-Fi.',
           });
         } else {
-          setNetworkState('external');
+          setNetwork('external');
           setStatusMessage({
             type: 'neutral',
             text: `Connected to external Wi-Fi ("${env.ssid}").`,
           });
         }
       } else {
-        // No saved credentials
+        // No saved credentials — Issue 1: never show 'online' to an unregistered user.
+        // Even if the device has internet on CURAJ WiFi (e.g. from a previous browser
+        // session), the app has done nothing — show 'unregistered' to prompt setup.
         if (env.type === 'curaj_wifi') {
-          setNetworkState(env.isOnline ? 'online' : 'login_needed');
+          setNetwork('unregistered');
           setStatusMessage({
-            type: env.isOnline ? 'success' : 'neutral',
-            text: env.isOnline
-              ? `✓ Connected to ${env.ssid}.`
-              : `● ${env.ssid} detected. Enter credentials to login.`,
+            type: 'neutral',
+            text: `● ${env.ssid || 'CURAJ Wi-Fi'} detected. Enter your credentials and tap Register to enable auto-login.`,
           });
         } else if (env.type === 'offline') {
-          setNetworkState('offline');
+          setNetwork('offline');
           setStatusMessage({
             type: 'neutral',
             text: 'Device is offline. Enter credentials once Wi-Fi is available.',
           });
         } else if (env.type === 'cellular') {
-          setNetworkState('external');
+          setNetwork('external');
           setStatusMessage({
             type: 'neutral',
             text: 'Connected via mobile data. Enter credentials to enable auto-login.',
           });
         } else {
-          setNetworkState('external');
+          setNetwork('external');
           setStatusMessage({
             type: 'neutral',
             text: `Connected to external Wi-Fi ("${env.ssid}").`,
@@ -264,20 +291,30 @@ function CampusConnectMain() {
     const unsubscribe = NetInfo.addEventListener(() => {
       detectEnvironment().then(env => {
         if (env.type === 'offline') {
-          setNetworkState('offline');
+          setNetwork('offline');
           setStatusMessage({
             type: 'neutral',
             text: 'Device is offline. Turn on Wi-Fi to connect.',
           });
         } else if (env.type === 'curaj_wifi') {
           if (env.isOnline) {
-            setNetworkState('online');
-            setStatusMessage({
-              type: 'success',
-              text: `✓ Connected to ${env.ssid} with active internet.`,
-            });
+            // Only show 'online' if credentials are registered. An unregistered user
+            // on CURAJ WiFi with existing internet must not see the success state.
+            if (isRegisteredRef.current) {
+              setNetwork('online');
+              setStatusMessage({
+                type: 'success',
+                text: `✓ Connected to ${env.ssid} with active internet.`,
+              });
+            } else {
+              setNetwork('unregistered');
+              setStatusMessage({
+                type: 'neutral',
+                text: `● ${env.ssid || 'CURAJ Wi-Fi'} detected. Enter your credentials and tap Register to enable auto-login.`,
+              });
+            }
           } else {
-            setNetworkState('login_needed');
+            setNetwork('login_needed');
             setStatusMessage({
               type: 'neutral',
               text: `● ${env.ssid} detected. Gateway login needed.`,
@@ -289,13 +326,13 @@ function CampusConnectMain() {
             });
           }
         } else if (env.type === 'cellular') {
-          setNetworkState('external');
+          setNetwork('external');
           setStatusMessage({
             type: 'neutral',
             text: 'Connected via mobile data. Auto-login is active on CURAJ Wi-Fi.',
           });
         } else {
-          setNetworkState('external');
+          setNetwork('external');
           setStatusMessage({
             type: 'neutral',
             text: `Connected to external Wi-Fi ("${env.ssid}").`,
@@ -312,12 +349,17 @@ function CampusConnectMain() {
       if (nextState === 'active') {
         detectEnvironment().then(env => {
           if (env.type === 'offline') {
-            setNetworkState('offline');
+            setNetwork('offline');
           } else if (env.type === 'curaj_wifi') {
             if (env.isOnline) {
-              setNetworkState('online');
+              // Guard: only 'online' if registered
+              if (isRegisteredRef.current) {
+                setNetwork('online');
+              } else {
+                setNetwork('unregistered');
+              }
             } else {
-              setNetworkState('login_needed');
+              setNetwork('login_needed');
               getCredentials().then(creds => {
                 if (creds && creds.username && creds.password) {
                   runAutoLogin(creds.username, creds.password, 'app-resume');
@@ -325,7 +367,7 @@ function CampusConnectMain() {
               });
             }
           } else {
-            setNetworkState('external');
+            setNetwork('external');
           }
         });
       }
@@ -333,31 +375,52 @@ function CampusConnectMain() {
     return () => sub.remove();
   }, [detectEnvironment, runAutoLogin]);
 
+  // Ref to throttle watchdog retries when internet is completely down (Issue 2).
+  // Avoids hammering the gateway every 5s when it's already confirmed unreachable.
+  const lastNoInternetCheckRef = useRef(0);
+
   // 4. Continuous Watchdog Macro: checks every 5 seconds without failing on dual networks
   useEffect(() => {
     const timer = setInterval(() => {
       if (isAuthenticatingRef.current) return;
+
+      // Issue 2: When internet is fully down, slow retries to every 30s.
+      if (networkStateRef.current === 'no_internet') {
+        const now = Date.now();
+        if (now - lastNoInternetCheckRef.current < 30000) return;
+        lastNoInternetCheckRef.current = now;
+      }
+
       detectEnvironment().then(env => {
         if (env.type === 'offline') {
-          setNetworkState('offline');
+          setNetwork('offline');
           return;
         }
         if (env.type === 'cellular') {
-          setNetworkState('external');
+          setNetwork('external');
           return;
         }
         if (env.type === 'external_wifi') {
-          setNetworkState('external');
+          setNetwork('external');
           return;
         }
         if (env.type === 'curaj_wifi') {
           if (env.isOnline) {
-            setNetworkState('online');
+            // Guard: only mark 'online' if user has registered credentials
+            if (isRegisteredRef.current) {
+              setNetwork('online');
+            } else {
+              setNetwork('unregistered');
+            }
           } else {
-            setNetworkState('login_needed');
             getCredentials().then(creds => {
               if (creds && creds.username && creds.password) {
+                // Registered user — attempt login; runAutoLogin will set no_internet
+                // if gateway is unreachable.
                 runAutoLogin(creds.username, creds.password, 'watchdog');
+              } else {
+                // Unregistered user — just flag as unregistered, not login_needed
+                setNetwork('unregistered');
               }
             });
           }
@@ -390,7 +453,7 @@ function CampusConnectMain() {
       const env = await detectEnvironment();
 
       if (env.type === 'offline') {
-        setNetworkState('offline');
+        setNetwork('offline');
         setStatusMessage({
           type: 'neutral',
           text: 'Device is offline. Please turn on Wi-Fi or mobile data.',
@@ -400,13 +463,22 @@ function CampusConnectMain() {
 
       if (env.type === 'curaj_wifi') {
         if (env.isOnline) {
-          setNetworkState('online');
-          setStatusMessage({
-            type: 'success',
-            text: `✓ Connected to ${env.ssid} with active internet.`,
-          });
+          // Guard: status pill must also respect registration state
+          if (isRegisteredRef.current) {
+            setNetwork('online');
+            setStatusMessage({
+              type: 'success',
+              text: `✓ Connected to ${env.ssid} with active internet.`,
+            });
+          } else {
+            setNetwork('unregistered');
+            setStatusMessage({
+              type: 'neutral',
+              text: `● ${env.ssid || 'CURAJ Wi-Fi'} detected. Enter your credentials and tap Register to enable auto-login.`,
+            });
+          }
         } else {
-          setNetworkState('login_needed');
+          setNetwork('login_needed');
           setStatusMessage({
             type: 'neutral',
             text: `● ${env.ssid} connected. Gateway login needed.`,
@@ -416,7 +488,7 @@ function CampusConnectMain() {
       }
 
       if (env.type === 'cellular') {
-        setNetworkState('external');
+        setNetwork('external');
         setStatusMessage({
           type: 'neutral',
           text: env.isOnline
@@ -427,7 +499,7 @@ function CampusConnectMain() {
       }
 
       if (env.type === 'external_wifi') {
-        setNetworkState('external');
+        setNetwork('external');
         setStatusMessage({
           type: 'neutral',
           text: `Connected to external Wi-Fi ("${env.ssid}"). Connect to CURAJ Wi-Fi for campus auto-login.`,
@@ -468,7 +540,9 @@ function CampusConnectMain() {
 
     // Save locally
     await saveCredentials(username, password);
-    setIsRegistered(true);
+    // NOTE: setIsRegistered(true) is intentionally called AFTER runAutoLogin completes.
+    // Calling it before would flip the button label to "Update & Reconnect" before the
+    // loading spinner starts, causing a jarring flash. Credentials are already on disk.
 
     // Start native 24/7 background service
     if (Platform.OS === 'android' && CampusConnectModule?.startBackgroundService) {
@@ -480,8 +554,11 @@ function CampusConnectMain() {
       text: 'Credentials registered. Initiating connection...',
     });
 
-    // Run auto-login immediately
+    // Run auto-login immediately — button stays "Register Auto-Login" + spinner during this
     await runAutoLogin(username, password, 'manual-register');
+
+    // Only flip to registered state after the login attempt resolves
+    setIsRegistered(true);
   };
 
   // Manual sync / test connection
@@ -574,7 +651,11 @@ function CampusConnectMain() {
                   ? styles.statusPillExternal
                   : networkState === 'login_needed'
                     ? styles.statusPillLoginNeeded
-                    : styles.statusPillOffline,
+                    : networkState === 'no_internet'
+                      ? styles.statusPillNoInternet
+                      : networkState === 'unregistered'
+                        ? styles.statusPillUnregistered
+                        : styles.statusPillOffline,
           ]}
           onPress={handleStatusPillPress}
           disabled={isLoading}
@@ -592,7 +673,11 @@ function CampusConnectMain() {
                     ? styles.statusPillTextExternal
                     : networkState === 'login_needed'
                       ? styles.statusPillTextLoginNeeded
-                      : styles.statusPillTextOffline,
+                      : networkState === 'no_internet'
+                        ? styles.statusPillTextNoInternet
+                        : networkState === 'unregistered'
+                          ? styles.statusPillTextUnregistered
+                          : styles.statusPillTextOffline,
             ]}
           >
             {isLoading
@@ -603,9 +688,13 @@ function CampusConnectMain() {
                   ? '● EXTERNAL'
                   : networkState === 'login_needed'
                     ? '● LOGIN NEEDED'
-                    : networkState === 'offline'
-                      ? '○ OFFLINE'
-                      : '○ CHECKING'}
+                    : networkState === 'no_internet'
+                      ? '○ NO INTERNET'
+                      : networkState === 'unregistered'
+                        ? '● NOT REGISTERED'
+                        : networkState === 'offline'
+                          ? '○ OFFLINE'
+                          : '○ CHECKING'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -769,6 +858,28 @@ function CampusConnectMain() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Issue 2: Full-screen blocking overlay — WiFi connected but internet is completely down.
+          Disables all buttons implicitly (sits above them), shows clear diagnosis,
+          and offers a single Retry action. Tap retry re-runs status pill check. */}
+      {networkState === 'no_internet' && (
+        <View style={styles.noInternetOverlay}>
+          <View style={styles.noInternetCard}>
+            <Text style={styles.noInternetIcon}>📡</Text>
+            <Text style={styles.noInternetTitle}>No Internet Access</Text>
+            <Text style={styles.noInternetBody}>
+              {'CURAJ Wi-Fi is connected but the campus gateway has no internet.\nThis usually means the ISP link or gateway server is temporarily down.'}
+            </Text>
+            <TouchableOpacity
+              style={styles.noInternetRetryBtn}
+              onPress={handleStatusPillPress}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.noInternetRetryText}>Retry Check</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -853,6 +964,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  // Issue 2: no internet — amber/orange warning tone
+  statusPillNoInternet: {
+    backgroundColor: '#2a1f0a',
+    borderWidth: 1,
+    borderColor: '#b45309',
+  },
+  // Issue 1: unregistered — neutral blue-grey, distinct from green 'online'
+  statusPillUnregistered: {
+    backgroundColor: '#141e2a',
+    borderWidth: 1,
+    borderColor: '#2563eb',
+  },
   statusPillText: {
     fontSize: 11,
     fontWeight: '700',
@@ -872,6 +995,12 @@ const styles = StyleSheet.create({
   },
   statusPillTextOffline: {
     color: colors.muted,
+  },
+  statusPillTextNoInternet: {
+    color: '#f59e0b',
+  },
+  statusPillTextUnregistered: {
+    color: '#93c5fd',
   },
   container: {
     flex: 1,
@@ -1045,4 +1174,56 @@ const styles = StyleSheet.create({
     color: colors.faint,
     letterSpacing: 0.3,
   },
+
+  // Issue 2: Full-screen blocking overlay styles
+  noInternetOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(12, 10, 9, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    zIndex: 100,
+  },
+  noInternetCard: {
+    backgroundColor: '#1a1612',
+    borderWidth: 1,
+    borderColor: '#b45309',
+    borderRadius: 8,
+    padding: 28,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 360,
+  },
+  noInternetIcon: {
+    fontSize: 36,
+    marginBottom: 14,
+  },
+  noInternetTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#f59e0b',
+    marginBottom: 10,
+    textAlign: 'center',
+    letterSpacing: 0.2,
+  },
+  noInternetBody: {
+    fontSize: 13,
+    color: colors.muted,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 22,
+  },
+  noInternetRetryBtn: {
+    backgroundColor: '#92400e',
+    borderRadius: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+  },
+  noInternetRetryText: {
+    color: '#fde68a',
+    fontSize: 13.5,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
 });
+
