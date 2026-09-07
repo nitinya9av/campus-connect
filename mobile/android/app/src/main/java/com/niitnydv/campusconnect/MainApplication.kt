@@ -38,6 +38,17 @@ class MainApplication : Application(), ReactApplication {
 
     // Silent background Wi-Fi watcher without notifications
     try {
+      val prefs = getSharedPreferences(CampusConnectCore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
+      val isEnabled = prefs.getBoolean(CampusConnectCore.KEY_ENABLED, false)
+      val username = prefs.getString(CampusConnectCore.KEY_USERNAME, "")
+      val password = prefs.getString(CampusConnectCore.KEY_PASSWORD, "")
+      if (isEnabled && !username.isNullOrEmpty() && !password.isNullOrEmpty()) {
+        CampusConnectService.start(this)
+        CampusConnectWatchdogReceiver.schedule(this, 5000)
+      }
+    } catch (_: Exception) {}
+
+    try {
       val cm = getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
       val req = android.net.NetworkRequest.Builder()
         .addTransportType(android.net.NetworkCapabilities.TRANSPORT_WIFI)

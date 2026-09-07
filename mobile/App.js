@@ -38,6 +38,25 @@ function CampusConnectMain() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [isBatteryIgnored, setIsBatteryIgnored] = useState(false);
+  const [manufacturer, setManufacturer] = useState('');
+
+  const checkBatteryState = useCallback(async () => {
+    if (Platform.OS === 'android' && CampusConnectModule) {
+      try {
+        if (CampusConnectModule.isBatteryOptimizationIgnored) {
+          const ignored = await CampusConnectModule.isBatteryOptimizationIgnored();
+          setIsBatteryIgnored(!!ignored);
+        }
+        if (CampusConnectModule.getManufacturer) {
+          const mfg = await CampusConnectModule.getManufacturer();
+          setManufacturer(mfg || '');
+        }
+      } catch (e) {
+        console.warn('Error checking battery optimization status:', e);
+      }
+    }
+  }, []);
   // networkState values:
   //   'checking'      — initial probe in progress
   //   'online'        — registered + authenticated + internet confirmed
@@ -221,6 +240,7 @@ function CampusConnectMain() {
   // should NOT wait on slow network probes (NAS/internet timeouts).
   useEffect(() => {
     (async () => {
+      checkBatteryState();
       const [env, creds] = await Promise.all([detectEnvironment(), getCredentials()]);
 
       if (creds && creds.username && creds.password) {
@@ -347,6 +367,7 @@ function CampusConnectMain() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', nextState => {
       if (nextState === 'active') {
+        checkBatteryState();
         detectEnvironment().then(env => {
           if (env.type === 'offline') {
             setNetwork('offline');
@@ -559,6 +580,32 @@ function CampusConnectMain() {
 
     // Only flip to registered state after the login attempt resolves
     setIsRegistered(true);
+    checkBatteryState();
+
+    if (Platform.OS === 'android' && CampusConnectModule?.isBatteryOptimizationIgnored) {
+      CampusConnectModule.isBatteryOptimizationIgnored().then(ignored => {
+        setIsBatteryIgnored(ignored);
+        if (!ignored) {
+          setTimeout(() => {
+            Alert.alert(
+              'Keep Running in Background',
+              'Android may sleep background apps after a few hours. Allow unrestricted background access so Campus Connect can connect to CURAJ Wi-Fi 24/7 without needing to open the app.',
+              [
+                { text: 'Later', style: 'cancel' },
+                {
+                  text: 'Allow Background Access',
+                  onPress: () => {
+                    CampusConnectModule.requestIgnoreBatteryOptimization?.().then(() => {
+                      setTimeout(checkBatteryState, 1500);
+                    });
+                  },
+                },
+              ]
+            );
+          }, 600);
+        }
+      });
+    }
   };
 
   // Manual sync / test connection
@@ -818,6 +865,68 @@ function CampusConnectMain() {
                   {statusMessage.text}
                 </Text>
               </View>
+
+              {/* Section 03: 24/7 Background Persistence & Self-Restart */}
+              {isRegistered && (
+                <View style={{ marginTop: 24 }}>
+                  <Text style={styles.sectionLabel}>03 • 24/7 BACKGROUND PERSISTENCE</Text>
+                  <View style={[styles.card, styles.persistenceCard]}>
+                    <View style={styles.persistenceHeaderRow}>
+                      <View
+                        style={[
+                          styles.persistenceStatusDot,
+                          { backgroundColor: isBatteryIgnored ? colors.green : '#f59e0b' },
+                        ]}
+                      />
+                      <Text style={styles.persistenceTitle}>
+                        {isBatteryIgnored
+                          ? 'MacroDroid-Grade Persistence Active'
+                          : 'Prevent Android From Sleeping App'}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.persistenceDesc}>
+                      {isBatteryIgnored
+                        ? 'Battery optimization is disabled. Auto-login runs 24/7 in the background with a self-healing watchdog.'
+                        : 'Android battery saver will sleep background apps after a few hours. Allow unrestricted battery access so you connect to CURAJ Wi-Fi instantly.'}
+                    </Text>
+
+                    {!isBatteryIgnored && (
+                      <TouchableOpacity
+                        style={styles.batteryOptButton}
+                        onPress={() => {
+                          if (Platform.OS === 'android' && CampusConnectModule?.requestIgnoreBatteryOptimization) {
+                            CampusConnectModule.requestIgnoreBatteryOptimization().then(() => {
+                              setTimeout(checkBatteryState, 1500);
+                            });
+                          }
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.batteryOptButtonText}>⚡ Disable Battery Optimization</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {['xiaomi', 'redmi', 'poco', 'samsung', 'oppo', 'vivo', 'iqoo', 'realme', 'oneplus'].some((b) =>
+                      manufacturer.includes(b)
+                    ) && (
+                      <TouchableOpacity
+                        style={[styles.oemButton, !isBatteryIgnored && { marginTop: 4 }]}
+                        onPress={() => {
+                          if (Platform.OS === 'android' && CampusConnectModule?.openOemAutostartSettings) {
+                            CampusConnectModule.openOemAutostartSettings();
+                          }
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.oemButtonText}>
+                          ⚙️ Open {manufacturer ? manufacturer.toUpperCase() : 'Device'} Autostart Settings
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              )}
             </View>
 
             {/* Editorial Footer (Pinned to bottom) */}
@@ -1224,6 +1333,64 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  persistenceCard: {
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  persistenceHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  persistenceStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  persistenceTitle: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.1,
+  },
+  persistenceDesc: {
+    fontSize: 12.5,
+    color: colors.muted,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  batteryOptButton: {
+    backgroundColor: 'rgba(217, 83, 47, 0.15)',
+    borderWidth: 1,
+    borderColor: colors.accent,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  batteryOptButtonText: {
+    color: colors.accent,
+    fontSize: 12.5,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  oemButton: {
+    backgroundColor: colors.surfaceHover,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+  },
+  oemButtonText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

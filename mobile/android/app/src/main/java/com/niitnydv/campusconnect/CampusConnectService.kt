@@ -22,8 +22,14 @@ class CampusConnectService : Service() {
 
     companion object {
         private const val TAG = "CampusConnectService"
-        const val CHANNEL_ID = "campus_connect_min_channel"
+        const val CHANNEL_ID = "campus_connect_fg_channel"
         const val NOTIFICATION_ID = 1001
+
+        @Volatile
+        var isRunning = false
+            private set
+
+        fun isServiceRunning(): Boolean = isRunning
 
         fun start(context: Context) {
             val intent = Intent(context, CampusConnectService::class.java)
@@ -35,6 +41,8 @@ class CampusConnectService : Service() {
         }
 
         fun stop(context: Context) {
+            isRunning = false
+            CampusConnectWatchdogReceiver.cancel(context)
             val intent = Intent(context, CampusConnectService::class.java)
             context.stopService(intent)
         }
@@ -43,51 +51,77 @@ class CampusConnectService : Service() {
     private val executor = Executors.newSingleThreadExecutor()
     private var connectivityManager: ConnectivityManager? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
-    @Volatile private var isRunning = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
-        createMinNotificationChannel()
-        startForegroundWithMinNotification()
+        isRunning = true
+        createNotificationChannel()
+        startForegroundWithPersistentNotification()
         registerNetworkWatcher()
-        startPeriodicWatchdog()
-        Log.i(TAG, "CampusConnectService running with MIN importance.")
+
+        // Arm the self-healing watchdog dead man's switch
+        CampusConnectWatchdogReceiver.schedule(this)
+        Log.i(TAG, "CampusConnectService initialized with persistent foreground priority & watchdog.")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        isRunning = true
+
         executor.execute {
             CampusConnectCore.checkAndAuthenticate(this, "service-start")
         }
+
+        // Re-arm watchdog to ensure ongoing resilience
+        CampusConnectWatchdogReceiver.schedule(this)
         return START_STICKY
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        Log.w(TAG, "App task removed from recents. Ensuring watchdog and service persistence...")
+        // If user swiped app away, ensure watchdog wakes up in 3 seconds to guarantee service stays alive
+        CampusConnectWatchdogReceiver.schedule(this, 3000)
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        val wasRunning = isRunning
         isRunning = false
         unregisterNetworkWatcher()
         executor.shutdownNow()
-        Log.i(TAG, "CampusConnectService stopped.")
+
+        // Check if user still has auto-connect enabled; if so, resurrect service automatically
+        val prefs = getSharedPreferences(CampusConnectCore.PREFS_NAME, Context.MODE_PRIVATE)
+        val isEnabled = prefs.getBoolean(CampusConnectCore.KEY_ENABLED, false)
+        val username = prefs.getString(CampusConnectCore.KEY_USERNAME, "")
+
+        if (wasRunning && isEnabled && !username.isNullOrEmpty()) {
+            Log.w(TAG, "Service destroyed while enabled. Scheduling immediate resurrection...")
+            CampusConnectWatchdogReceiver.schedule(this, 3000)
+        } else {
+            Log.i(TAG, "CampusConnectService stopped.")
+        }
     }
 
-    private fun createMinNotificationChannel() {
+    private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Background Connection Service",
-                NotificationManager.IMPORTANCE_MIN // Hidden from status bar, completely silent
+                "Campus Connect Service",
+                NotificationManager.IMPORTANCE_LOW // Silent, non-intrusive, but keeps process foreground
             ).apply {
-                description = "Enables automatic background Wi-Fi login without opening the app"
+                description = "Keeps auto-login active and connects automatically to CURAJ Wi-Fi"
                 setShowBadge(false)
-                lockscreenVisibility = Notification.VISIBILITY_SECRET
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager?.createNotificationChannel(channel)
         }
     }
 
-    private fun buildMinNotification(): Notification {
+    private fun buildNotification(): Notification {
         val launchIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
@@ -100,17 +134,18 @@ class CampusConnectService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Campus Connect")
-            .setContentText("Background auto-login active")
+            .setContentTitle("CURAJ Campus Connect")
+            .setContentText("Auto-login active • Monitoring campus Wi-Fi")
             .setContentIntent(pendingIntent)
             .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_MIN) // No status bar icon, min priority
-            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
     }
 
-    private fun startForegroundWithMinNotification() {
-        val notification = buildMinNotification()
+    private fun startForegroundWithPersistentNotification() {
+        val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIFICATION_ID,
@@ -153,22 +188,6 @@ class CampusConnectService : Service() {
             networkCallback?.let { connectivityManager?.unregisterNetworkCallback(it) }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to unregister network callback", e)
-        }
-    }
-
-    private fun startPeriodicWatchdog() {
-        isRunning = true
-        executor.execute {
-            while (isRunning) {
-                try {
-                    Thread.sleep(15000)
-                    if (isRunning) {
-                        CampusConnectCore.checkAndAuthenticate(this@CampusConnectService, "watchdog")
-                    }
-                } catch (e: InterruptedException) {
-                    break
-                }
-            }
         }
     }
 }

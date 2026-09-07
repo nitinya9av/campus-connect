@@ -1,9 +1,14 @@
 package com.niitnydv.campusconnect
 
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -30,6 +35,7 @@ class CampusConnectModule(private val reactContext: ReactApplicationContext) :
                 .apply()
 
             CampusConnectService.start(reactContext)
+            CampusConnectWatchdogReceiver.schedule(reactContext, 5000)
             promise.resolve(true)
         } catch (e: Exception) {
             promise.reject("CONFIG_FAILED", e.message, e)
@@ -50,10 +56,117 @@ class CampusConnectModule(private val reactContext: ReactApplicationContext) :
                 .apply()
 
             CampusConnectService.stop(reactContext)
+            CampusConnectWatchdogReceiver.cancel(reactContext)
             promise.resolve(true)
         } catch (e: Exception) {
             promise.reject("STOP_FAILED", e.message, e)
         }
+    }
+
+    @ReactMethod
+    fun isServiceRunning(promise: Promise) {
+        promise.resolve(CampusConnectService.isServiceRunning())
+    }
+
+    @ReactMethod
+    fun getManufacturer(promise: Promise) {
+        promise.resolve(Build.MANUFACTURER.lowercase())
+    }
+
+    @ReactMethod
+    fun isBatteryOptimizationIgnored(promise: Promise) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val pm = reactContext.getSystemService(Context.POWER_SERVICE) as? PowerManager
+                val isIgnored = pm?.isIgnoringBatteryOptimizations(reactContext.packageName) == true
+                promise.resolve(isIgnored)
+            } else {
+                promise.resolve(true)
+            }
+        } catch (e: Exception) {
+            promise.resolve(false)
+        }
+    }
+
+    @ReactMethod
+    fun requestIgnoreBatteryOptimization(promise: Promise) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val pm = reactContext.getSystemService(Context.POWER_SERVICE) as? PowerManager
+                if (pm?.isIgnoringBatteryOptimizations(reactContext.packageName) == false) {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:${reactContext.packageName}")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    reactContext.startActivity(intent)
+                    promise.resolve(true)
+                    return
+                }
+            }
+            promise.resolve(false)
+        } catch (e: Exception) {
+            // Fallback: open battery saver settings list
+            try {
+                val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                reactContext.startActivity(fallbackIntent)
+                promise.resolve(true)
+            } catch (ex: Exception) {
+                promise.reject("BATTERY_OPT_ERROR", ex.message, ex)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun openOemAutostartSettings(promise: Promise) {
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        val intentsToTry = mutableListOf<Intent>()
+
+        when {
+            manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> {
+                intentsToTry.add(Intent().setComponent(ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")))
+                intentsToTry.add(Intent().setComponent(ComponentName("com.miui.securitycenter", "com.miui.powercenter.PowerSettings")))
+            }
+            manufacturer.contains("samsung") -> {
+                intentsToTry.add(Intent().setComponent(ComponentName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity")))
+                intentsToTry.add(Intent().setComponent(ComponentName("com.samsung.android.sm", "com.samsung.android.sm.ui.battery.BatteryActivity")))
+            }
+            manufacturer.contains("oppo") -> {
+                intentsToTry.add(Intent().setComponent(ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")))
+                intentsToTry.add(Intent().setComponent(ComponentName("com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity")))
+            }
+            manufacturer.contains("vivo") || manufacturer.contains("iqoo") -> {
+                intentsToTry.add(Intent().setComponent(ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")))
+                intentsToTry.add(Intent().setComponent(ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity")))
+            }
+            manufacturer.contains("realme") -> {
+                intentsToTry.add(Intent().setComponent(ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")))
+                intentsToTry.add(Intent().setComponent(ComponentName("com.realme.security", "com.realme.security.permission.startup.StartupAppListActivity")))
+            }
+            manufacturer.contains("oneplus") -> {
+                intentsToTry.add(Intent().setComponent(ComponentName("com.oneplus.security", "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity")))
+            }
+        }
+
+        // Generic fallback to application details
+        val appDetailsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:${reactContext.packageName}")
+        }
+        intentsToTry.add(appDetailsIntent)
+
+        for (intent in intentsToTry) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                reactContext.startActivity(intent)
+                promise.resolve(true)
+                return
+            } catch (_: Exception) {
+                // Try next intent
+            }
+        }
+
+        promise.resolve(false)
     }
 
     @ReactMethod
@@ -106,6 +219,7 @@ class CampusConnectModule(private val reactContext: ReactApplicationContext) :
                 putBoolean("isCurajPortalReachable", isCurajPortalReachable)
                 putBoolean("isWifiOnline", isWifiOnline)
                 putBoolean("hasCellular", hasCellular)
+                putBoolean("isServiceRunning", CampusConnectService.isServiceRunning())
             }
             promise.resolve(map)
         } catch (e: Exception) {
