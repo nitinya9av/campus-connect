@@ -1,11 +1,35 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
   <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
     <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
-    <item name="colorPrimary">@color/colorPrimary</item>
+    <item name="colorPrimary">#e2725b</item>
+    <item name="colorAccent">#e2725b</item>
     <item name="android:statusBarColor">@android:color/transparent</item>
     <item name="android:navigationBarColor">@android:color/transparent</item>
     <item name="android:windowBackground">@color/activityBackground</item>
+    <item name="alertDialogTheme">@style/CampusConnectAlertDialog</item>
+    <item name="android:alertDialogTheme">@style/CampusConnectAlertDialog</item>
   </style>
+
+  <style name="CampusConnectAlertDialog" parent="Theme.AppCompat.Dialog.Alert">
+    <item name="android:windowBackground">@drawable/dialog_rounded_bg</item>
+    <item name="colorAccent">#e2725b</item>
+    <item name="colorPrimary">#e2725b</item>
+    <item name="android:textColorPrimary">#f1f5f9</item>
+    <item name="android:textColorSecondary">#8b9bb4</item>
+    <item name="buttonBarPositiveButtonStyle">@style/DialogPositiveButton</item>
+    <item name="buttonBarNegativeButtonStyle">@style/DialogNeutralButton</item>
+    <item name="buttonBarNeutralButtonStyle">@style/DialogNeutralButton</item>
+  </style>
+
+  <style name="DialogPositiveButton" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
+    <item name="android:textColor">#e2725b</item>
+    <item name="android:textStyle">bold</item>
+  </style>
+
+  <style name="DialogNeutralButton" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
+    <item name="android:textColor">#8b9bb4</item>
+  </style>
+
   <style name="Theme.App.SplashScreen" parent="Theme.SplashScreen">
     <item name="windowSplashScreenBackground">@color/splashscreen_background</item>
     <item name="windowSplashScreenAnimatedIcon">@drawable/splashscreen_logo</item>

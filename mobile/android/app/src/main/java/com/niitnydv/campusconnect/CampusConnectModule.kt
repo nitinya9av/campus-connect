@@ -170,6 +170,20 @@ class CampusConnectModule(private val reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun openBatterySettings(promise: Promise) {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:${reactContext.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            reactContext.startActivity(intent)
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.reject("SETTINGS_ERROR", e.message, e)
+        }
+    }
+
+    @ReactMethod
     fun getWifiStatus(promise: Promise) {
         try {
             val context = reactContext

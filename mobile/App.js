@@ -9,13 +9,15 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   AppState,
+  BackHandler,
+  Modal,
   NativeModules,
   Linking,
 } from 'react-native';
 
 const { CampusConnectModule } = NativeModules;
+import { Ionicons } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,8 +40,23 @@ function CampusConnectMain() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
-  const [isBatteryIgnored, setIsBatteryIgnored] = useState(false);
-  const [manufacturer, setManufacturer] = useState('');
+  const [isBatteryIgnored, setIsBatteryIgnored] = useState(true);
+  const [batteryChecked, setBatteryChecked] = useState(false);
+  const [activeDialog, setActiveDialog] = useState(null);
+
+  const showThemedDialog = useCallback((title, message, buttons = [{ text: 'OK' }]) => {
+    const isDestructive = buttons.some(b => b.destructive || b.style === 'destructive');
+    setActiveDialog({
+      title: title ? title.toUpperCase() : 'CURAJ CAMPUS CONNECT',
+      message,
+      buttons,
+      isDestructive,
+    });
+  }, []);
+
+  const closeThemedDialog = useCallback(() => {
+    setActiveDialog(null);
+  }, []);
 
   const checkBatteryState = useCallback(async () => {
     if (Platform.OS === 'android' && CampusConnectModule) {
@@ -47,16 +64,60 @@ function CampusConnectMain() {
         if (CampusConnectModule.isBatteryOptimizationIgnored) {
           const ignored = await CampusConnectModule.isBatteryOptimizationIgnored();
           setIsBatteryIgnored(!!ignored);
-        }
-        if (CampusConnectModule.getManufacturer) {
-          const mfg = await CampusConnectModule.getManufacturer();
-          setManufacturer(mfg || '');
+          setBatteryChecked(true);
+          return !!ignored;
         }
       } catch (e) {
         console.warn('Error checking battery optimization status:', e);
       }
+      setBatteryChecked(true);
+      return false;
+    } else {
+      setIsBatteryIgnored(true);
+      setBatteryChecked(true);
+      return true;
     }
   }, []);
+
+  const handleAllowBattery = useCallback(async () => {
+    if (Platform.OS === 'android' && CampusConnectModule) {
+      try {
+        if (CampusConnectModule.requestIgnoreBatteryOptimization) {
+          await CampusConnectModule.requestIgnoreBatteryOptimization();
+        }
+      } catch (e) {
+        if (CampusConnectModule.openBatterySettings) {
+          await CampusConnectModule.openBatterySettings();
+        }
+      }
+      setTimeout(checkBatteryState, 800);
+      setTimeout(checkBatteryState, 2000);
+    }
+  }, [checkBatteryState]);
+
+  const handleOpenBatterySettings = useCallback(async () => {
+    if (Platform.OS === 'android' && CampusConnectModule?.openBatterySettings) {
+      try {
+        await CampusConnectModule.openBatterySettings();
+      } catch (e) {
+        console.warn('Error opening battery settings:', e);
+      }
+      setTimeout(checkBatteryState, 1000);
+    }
+  }, [checkBatteryState]);
+
+  // Block hardware back button when the battery dialog is active
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const onBackPress = () => {
+      if (batteryChecked && !isBatteryIgnored) {
+        return true;
+      }
+      return false;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [batteryChecked, isBatteryIgnored]);
   // networkState values:
   //   'checking'      — initial probe in progress
   //   'online'        — registered + authenticated + internet confirmed
@@ -163,7 +224,7 @@ function CampusConnectMain() {
       setNetwork('offline');
       setStatusMessage({
         type: 'error',
-        text: '⚠ Device is offline. Please turn on Wi-Fi.',
+        text: 'Device is offline. Please turn on Wi-Fi.',
       });
       return;
     }
@@ -207,7 +268,7 @@ function CampusConnectMain() {
         setNetwork('online');
         setStatusMessage({
           type: 'success',
-          text: '✓ ' + res.message,
+          text: res.message,
         });
         // Issue 3: Notify Android's ConnectivityService that the captive portal is
         // resolved. This clears the "Sign in required" notification bar entry on
@@ -226,7 +287,7 @@ function CampusConnectMain() {
         }
         setStatusMessage({
           type: 'error',
-          text: '⚠ ' + res.message,
+          text: res.message,
         });
       }
     } finally {
@@ -281,7 +342,7 @@ function CampusConnectMain() {
           setNetwork('unregistered');
           setStatusMessage({
             type: 'neutral',
-            text: `● ${env.ssid || 'CURAJ Wi-Fi'} detected. Enter your credentials and tap Register to enable auto-login.`,
+            text: `${env.ssid || 'CURAJ Wi-Fi'} detected. Enter your credentials and tap Register to enable auto-login.`,
           });
         } else if (env.type === 'offline') {
           setNetwork('offline');
@@ -324,20 +385,20 @@ function CampusConnectMain() {
               setNetwork('online');
               setStatusMessage({
                 type: 'success',
-                text: `✓ Connected to ${env.ssid} with active internet.`,
+                text: `Connected to ${env.ssid} with active internet.`,
               });
             } else {
               setNetwork('unregistered');
               setStatusMessage({
                 type: 'neutral',
-                text: `● ${env.ssid || 'CURAJ Wi-Fi'} detected. Enter your credentials and tap Register to enable auto-login.`,
+                text: `${env.ssid || 'CURAJ Wi-Fi'} detected. Enter your credentials and tap Register to enable auto-login.`,
               });
             }
           } else {
             setNetwork('login_needed');
             setStatusMessage({
               type: 'neutral',
-              text: `● ${env.ssid} detected. Gateway login needed.`,
+              text: `${env.ssid} detected. Gateway login needed.`,
             });
             getCredentials().then(creds => {
               if (creds && creds.username && creds.password) {
@@ -489,20 +550,20 @@ function CampusConnectMain() {
             setNetwork('online');
             setStatusMessage({
               type: 'success',
-              text: `✓ Connected to ${env.ssid} with active internet.`,
+              text: `Connected to ${env.ssid} with active internet.`,
             });
           } else {
             setNetwork('unregistered');
             setStatusMessage({
               type: 'neutral',
-              text: `● ${env.ssid || 'CURAJ Wi-Fi'} detected. Enter your credentials and tap Register to enable auto-login.`,
+              text: `${env.ssid || 'CURAJ Wi-Fi'} detected. Enter your credentials and tap Register to enable auto-login.`,
             });
           }
         } else {
           setNetwork('login_needed');
           setStatusMessage({
             type: 'neutral',
-            text: `● ${env.ssid} connected. Gateway login needed.`,
+            text: `${env.ssid} connected. Gateway login needed.`,
           });
         }
         return;
@@ -537,25 +598,25 @@ function CampusConnectMain() {
     if (!username || username.trim().length === 0) {
       setStatusMessage({
         type: 'error',
-        text: '⚠ Please enter your 10-digit mobile number.',
+        text: 'Please enter your 10-digit mobile number.',
       });
-      Alert.alert('Mobile Number Required', 'Please enter your 10-digit mobile number registered with CURAJ Wi-Fi.');
+      showThemedDialog('Mobile Number Required', 'Please enter your 10-digit mobile number registered with CURAJ Wi-Fi.');
       return;
     }
     if (username.length < 10) {
       setStatusMessage({
         type: 'error',
-        text: '⚠ Phone number must be exactly 10 digits.',
+        text: 'Phone number must be exactly 10 digits.',
       });
-      Alert.alert('Incomplete Phone Number', 'Please enter a valid 10-digit mobile number.');
+      showThemedDialog('Incomplete Phone Number', 'Please enter a valid 10-digit mobile number.');
       return;
     }
     if (!password || password.trim().length === 0) {
       setStatusMessage({
         type: 'error',
-        text: '⚠ Please enter your Wi-Fi password.',
+        text: 'Please enter your Wi-Fi password.',
       });
-      Alert.alert('Missing Password', 'Please enter your CURAJ Wi-Fi password.');
+      showThemedDialog('Missing Password', 'Please enter your CURAJ Wi-Fi password.');
       return;
     }
 
@@ -581,31 +642,6 @@ function CampusConnectMain() {
     // Only flip to registered state after the login attempt resolves
     setIsRegistered(true);
     checkBatteryState();
-
-    if (Platform.OS === 'android' && CampusConnectModule?.isBatteryOptimizationIgnored) {
-      CampusConnectModule.isBatteryOptimizationIgnored().then(ignored => {
-        setIsBatteryIgnored(ignored);
-        if (!ignored) {
-          setTimeout(() => {
-            Alert.alert(
-              'Keep Running in Background',
-              'Android may sleep background apps after a few hours. Allow unrestricted background access so Campus Connect can connect to CURAJ Wi-Fi 24/7 without needing to open the app.',
-              [
-                { text: 'Later', style: 'cancel' },
-                {
-                  text: 'Allow Background Access',
-                  onPress: () => {
-                    CampusConnectModule.requestIgnoreBatteryOptimization?.().then(() => {
-                      setTimeout(checkBatteryState, 1500);
-                    });
-                  },
-                },
-              ]
-            );
-          }, 600);
-        }
-      });
-    }
   };
 
   // Manual sync / test connection
@@ -613,9 +649,9 @@ function CampusConnectMain() {
     if (!username || !password) {
       setStatusMessage({
         type: 'error',
-        text: '⚠ Please enter both mobile number and password first.',
+        text: 'Please enter both mobile number and password first.',
       });
-      Alert.alert('Credentials Required', 'Please enter your mobile number and password before testing the connection.');
+      showThemedDialog('Credentials Required', 'Please enter your mobile number and password before testing the connection.');
       return;
     }
     setStatusMessage({
@@ -632,18 +668,18 @@ function CampusConnectMain() {
         type: 'neutral',
         text: 'No saved credentials found on this device.',
       });
-      Alert.alert('No Saved Data', 'There are no saved credentials to remove on this device.');
+      showThemedDialog('No Saved Data', 'There are no saved credentials to remove on this device.');
       return;
     }
 
-    Alert.alert(
+    showThemedDialog(
       'Deregister Device',
       'This will remove your saved credentials from this device and stop the background service.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Deregister',
-          style: 'destructive',
+          destructive: true,
           onPress: async () => {
             await clearCredentials();
             if (Platform.OS === 'android' && CampusConnectModule?.stopBackgroundService) {
@@ -709,40 +745,59 @@ function CampusConnectMain() {
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text
-            style={[
-              styles.statusPillText,
-              isLoading
-                ? styles.statusPillTextConnecting
+          <View style={styles.statusPillContent}>
+            {isLoading ? (
+              <Ionicons name="flash" size={11} color="#f59e0b" style={styles.statusPillIcon} />
+            ) : networkState === 'online' ? (
+              <Ionicons name="checkmark-circle" size={11} color={colors.green} style={styles.statusPillIcon} />
+            ) : networkState === 'external' ? (
+              <Ionicons name="globe-outline" size={11} color="#60a5fa" style={styles.statusPillIcon} />
+            ) : networkState === 'login_needed' ? (
+              <Ionicons name="lock-closed" size={11} color="#f59e0b" style={styles.statusPillIcon} />
+            ) : networkState === 'no_internet' ? (
+              <Ionicons name="alert-circle" size={11} color="#f87171" style={styles.statusPillIcon} />
+            ) : networkState === 'unregistered' ? (
+              <Ionicons name="person-outline" size={11} color={colors.muted} style={styles.statusPillIcon} />
+            ) : networkState === 'offline' ? (
+              <Ionicons name="wifi-outline" size={11} color={colors.muted} style={styles.statusPillIcon} />
+            ) : (
+              <Ionicons name="sync" size={11} color={colors.muted} style={styles.statusPillIcon} />
+            )}
+            <Text
+              style={[
+                styles.statusPillText,
+                isLoading
+                  ? styles.statusPillTextConnecting
+                  : networkState === 'online'
+                    ? styles.statusPillTextOnline
+                    : networkState === 'external'
+                      ? styles.statusPillTextExternal
+                      : networkState === 'login_needed'
+                        ? styles.statusPillTextLoginNeeded
+                        : networkState === 'no_internet'
+                          ? styles.statusPillTextNoInternet
+                          : networkState === 'unregistered'
+                            ? styles.statusPillTextUnregistered
+                            : styles.statusPillTextOffline,
+              ]}
+            >
+              {isLoading
+                ? 'CONNECTING'
                 : networkState === 'online'
-                  ? styles.statusPillTextOnline
+                  ? 'ONLINE'
                   : networkState === 'external'
-                    ? styles.statusPillTextExternal
+                    ? 'EXTERNAL'
                     : networkState === 'login_needed'
-                      ? styles.statusPillTextLoginNeeded
+                      ? 'LOGIN NEEDED'
                       : networkState === 'no_internet'
-                        ? styles.statusPillTextNoInternet
+                        ? 'NO INTERNET'
                         : networkState === 'unregistered'
-                          ? styles.statusPillTextUnregistered
-                          : styles.statusPillTextOffline,
-            ]}
-          >
-            {isLoading
-              ? '⚡ CONNECTING'
-              : networkState === 'online'
-                ? '● ONLINE'
-                : networkState === 'external'
-                  ? '● EXTERNAL'
-                  : networkState === 'login_needed'
-                    ? '● LOGIN NEEDED'
-                    : networkState === 'no_internet'
-                      ? '○ NO INTERNET'
-                      : networkState === 'unregistered'
-                        ? '● NOT REGISTERED'
-                        : networkState === 'offline'
-                          ? '○ OFFLINE'
-                          : '○ CHECKING'}
-          </Text>
+                          ? 'NOT REGISTERED'
+                          : networkState === 'offline'
+                            ? 'OFFLINE'
+                            : 'CHECKING'}
+            </Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -784,7 +839,14 @@ function CampusConnectMain() {
                     <TouchableOpacity
                       onPress={() => setShowPassword(!showPassword)}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      style={styles.toggleRow}
                     >
+                      <Ionicons
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={13}
+                        color={colors.muted}
+                        style={{ marginRight: 4 }}
+                      />
                       <Text style={styles.toggleText}>
                         {showPassword ? 'HIDE' : 'SHOW'}
                       </Text>
@@ -855,78 +917,25 @@ function CampusConnectMain() {
                   statusMessage.type === 'error' && styles.feedbackError,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.feedbackText,
-                    statusMessage.type === 'success' && styles.feedbackTextSuccess,
-                    statusMessage.type === 'error' && styles.feedbackTextError,
-                  ]}
-                >
-                  {statusMessage.text}
-                </Text>
-              </View>
-
-              {/* Section 03: 24/7 Background Persistence & Self-Restart */}
-              {isRegistered && (
-                <View style={{ marginTop: 24 }}>
-                  <Text style={styles.sectionLabel}>03 • 24/7 BACKGROUND PERSISTENCE</Text>
-                  <View style={[styles.card, styles.persistenceCard]}>
-                    <View style={styles.persistenceHeaderRow}>
-                      <View
-                        style={[
-                          styles.persistenceStatusDot,
-                          { backgroundColor: isBatteryIgnored ? colors.green : '#f59e0b' },
-                        ]}
-                      />
-                      <Text style={styles.persistenceTitle}>
-                        {isBatteryIgnored
-                          ? 'MacroDroid-Grade Persistence Active'
-                          : 'Prevent Android From Sleeping App'}
-                      </Text>
-                    </View>
-
-                    <Text style={styles.persistenceDesc}>
-                      {isBatteryIgnored
-                        ? 'Battery optimization is disabled. Auto-login runs 24/7 in the background with a self-healing watchdog.'
-                        : 'Android battery saver will sleep background apps after a few hours. Allow unrestricted battery access so you connect to CURAJ Wi-Fi instantly.'}
-                    </Text>
-
-                    {!isBatteryIgnored && (
-                      <TouchableOpacity
-                        style={styles.batteryOptButton}
-                        onPress={() => {
-                          if (Platform.OS === 'android' && CampusConnectModule?.requestIgnoreBatteryOptimization) {
-                            CampusConnectModule.requestIgnoreBatteryOptimization().then(() => {
-                              setTimeout(checkBatteryState, 1500);
-                            });
-                          }
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.batteryOptButtonText}>⚡ Disable Battery Optimization</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {['xiaomi', 'redmi', 'poco', 'samsung', 'oppo', 'vivo', 'iqoo', 'realme', 'oneplus'].some((b) =>
-                      manufacturer.includes(b)
-                    ) && (
-                      <TouchableOpacity
-                        style={[styles.oemButton, !isBatteryIgnored && { marginTop: 4 }]}
-                        onPress={() => {
-                          if (Platform.OS === 'android' && CampusConnectModule?.openOemAutostartSettings) {
-                            CampusConnectModule.openOemAutostartSettings();
-                          }
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.oemButtonText}>
-                          ⚙️ Open {manufacturer ? manufacturer.toUpperCase() : 'Device'} Autostart Settings
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                <View style={styles.feedbackRow}>
+                  {statusMessage.type === 'success' ? (
+                    <Ionicons name="checkmark-circle" size={15} color={colors.green} style={styles.feedbackIcon} />
+                  ) : statusMessage.type === 'error' ? (
+                    <Ionicons name="alert-circle" size={15} color={colors.red} style={styles.feedbackIcon} />
+                  ) : (
+                    <Ionicons name="information-circle-outline" size={15} color={colors.muted} style={styles.feedbackIcon} />
+                  )}
+                  <Text
+                    style={[
+                      styles.feedbackText,
+                      statusMessage.type === 'success' && styles.feedbackTextSuccess,
+                      statusMessage.type === 'error' && styles.feedbackTextError,
+                    ]}
+                  >
+                    {statusMessage.text}
+                  </Text>
                 </View>
-              )}
+              </View>
             </View>
 
             {/* Editorial Footer (Pinned to bottom) */}
@@ -942,7 +951,7 @@ function CampusConnectMain() {
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.sponsorHeart}>♥</Text>
+                  <Ionicons name="heart" size={12} color={colors.accent} style={{ marginRight: 4 }} />
                   <Text style={styles.sponsorBtnText}>Sponsor</Text>
                 </TouchableOpacity>
                 <Text style={styles.sponsorText}> to support us.</Text>
@@ -974,7 +983,9 @@ function CampusConnectMain() {
       {networkState === 'no_internet' && (
         <View style={styles.noInternetOverlay}>
           <View style={styles.noInternetCard}>
-            <Text style={styles.noInternetIcon}>📡</Text>
+            <View style={styles.noInternetIconCircle}>
+              <Ionicons name="cloud-offline-outline" size={32} color="#f59e0b" />
+            </View>
             <Text style={styles.noInternetTitle}>No Internet Access</Text>
             <Text style={styles.noInternetBody}>
               {'CURAJ Wi-Fi is connected but the campus gateway has no internet.\nThis usually means the ISP link or gateway server is temporarily down.'}
@@ -984,11 +995,126 @@ function CampusConnectMain() {
               onPress={handleStatusPillPress}
               activeOpacity={0.8}
             >
+              <Ionicons name="refresh" size={15} color="#fde68a" style={{ marginRight: 6 }} />
               <Text style={styles.noInternetRetryText}>Retry Check</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
+
+      {/* Themed Dialog Box: Matches App Theme & Info */}
+      <Modal
+        transparent
+        visible={Platform.OS === 'android' && batteryChecked && !isBatteryIgnored}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => {
+          // Prevent hardware back button dismiss
+        }}
+      >
+        <View style={styles.dialogBackdrop}>
+          <View style={styles.dialogCard}>
+            {/* App Brand Header */}
+            <View style={styles.dialogHeaderRow}>
+              <View style={styles.dialogDot} />
+              <Text style={styles.dialogTitle}>CURAJ CAMPUS CONNECT</Text>
+            </View>
+
+            {/* Info Body */}
+            <Text style={styles.dialogBody}>
+              To automatically connect to CURAJ Wi-Fi in the background 24/7 without opening the app, please allow unrestricted battery usage.
+            </Text>
+
+            {/* Action Buttons: Clean Standard Dialog Style */}
+            <View style={styles.dialogActionRow}>
+              <TouchableOpacity
+                style={styles.dialogSecondaryBtn}
+                onPress={handleOpenBatterySettings}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.dialogSecondaryBtnText}>SETTINGS</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.dialogPrimaryBtn}
+                onPress={handleAllowBattery}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.dialogPrimaryBtnText}>ALLOW</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* General Themed App Dialog (Validation, Alerts, Confirmations) */}
+      <Modal
+        transparent
+        visible={activeDialog !== null}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={closeThemedDialog}
+      >
+        <View style={styles.dialogBackdrop}>
+          <View style={styles.dialogCard}>
+            {/* App Brand Header */}
+            <View style={styles.dialogHeaderRow}>
+              <View
+                style={[
+                  styles.dialogDot,
+                  activeDialog?.isDestructive && { backgroundColor: colors.red },
+                ]}
+              />
+              <Text style={styles.dialogTitle}>
+                {activeDialog?.title || 'CURAJ CAMPUS CONNECT'}
+              </Text>
+            </View>
+
+            {/* Info Body */}
+            <Text style={styles.dialogBody}>{activeDialog?.message}</Text>
+
+            {/* Action Buttons */}
+            <View style={styles.dialogActionRow}>
+              {activeDialog?.buttons?.map((btn, index) => {
+                const isDestructive = btn.destructive || btn.style === 'destructive';
+                const isCancel = btn.style === 'cancel';
+                const isPrimary = !isCancel;
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      isPrimary
+                        ? isDestructive
+                          ? styles.dialogDestructiveBtn
+                          : styles.dialogPrimaryBtn
+                        : styles.dialogSecondaryBtn,
+                    ]}
+                    onPress={() => {
+                      closeThemedDialog();
+                      if (btn.onPress) {
+                        btn.onPress();
+                      }
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        isPrimary
+                          ? isDestructive
+                            ? styles.dialogDestructiveBtnText
+                            : styles.dialogPrimaryBtnText
+                          : styles.dialogSecondaryBtnText,
+                      ]}
+                    >
+                      {btn.text ? btn.text.toUpperCase() : 'OK'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1322,11 +1448,58 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 22,
   },
-  noInternetRetryBtn: {
-    backgroundColor: '#92400e',
+  statusPillContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusPillIcon: {
+    marginRight: 4,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  feedbackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  feedbackIcon: {
+    marginRight: 8,
+  },
+  sponsorBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 2,
+    paddingHorizontal: 6,
     borderRadius: 4,
+    backgroundColor: colors.surfaceHover,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  sponsorBtnText: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  noInternetIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderWidth: 1.5,
+    borderColor: '#f59e0b',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  noInternetRetryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#92400e',
+    borderRadius: 6,
     paddingVertical: 12,
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
   },
   noInternetRetryText: {
     color: '#fde68a',
@@ -1334,63 +1507,99 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-  persistenceCard: {
-    padding: 16,
+
+  // Themed Dialog Box Styles (clean, native-like footprint matching app theme & info)
+  dialogBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  dialogCard: {
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 22,
+    paddingTop: 22,
+    paddingBottom: 18,
+    width: '100%',
+    maxWidth: 320,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 20,
   },
-  persistenceHeaderRow: {
+  dialogHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
   },
-  persistenceStatusDot: {
+  dialogDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginRight: 8,
+    backgroundColor: colors.accent,
+    marginRight: 10,
   },
-  persistenceTitle: {
+  dialogTitle: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 13.5,
     fontWeight: '700',
     color: colors.text,
-    letterSpacing: -0.1,
+    letterSpacing: 0.3,
   },
-  persistenceDesc: {
-    fontSize: 12.5,
+  dialogBody: {
+    fontSize: 13,
     color: colors.muted,
-    lineHeight: 18,
-    marginBottom: 12,
+    lineHeight: 20,
+    marginTop: 12,
+    marginBottom: 22,
   },
-  batteryOptButton: {
-    backgroundColor: 'rgba(217, 83, 47, 0.15)',
+  dialogActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  dialogSecondaryBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 8,
+  },
+  dialogSecondaryBtnText: {
+    color: colors.muted,
+    fontSize: 12.5,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  dialogPrimaryBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    backgroundColor: 'rgba(226, 114, 91, 0.15)',
     borderWidth: 1,
     borderColor: colors.accent,
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    marginBottom: 8,
   },
-  batteryOptButtonText: {
+  dialogPrimaryBtnText: {
     color: colors.accent,
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 0.2,
+    letterSpacing: 0.4,
   },
-  oemButton: {
-    backgroundColor: colors.surfaceHover,
+  dialogDestructiveBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    alignItems: 'center',
+    borderColor: colors.red,
   },
-  oemButtonText: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '600',
+  dialogDestructiveBtnText: {
+    color: colors.red,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.4,
   },
 });
 
