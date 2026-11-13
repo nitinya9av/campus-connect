@@ -7,7 +7,21 @@ using System.Threading;
 using System.Diagnostics;
 using System.Windows.Forms;
 using System.Drawing;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.Win32;
+
+[assembly: AssemblyTitle("CURAJ Campus Connect")]
+[assembly: AssemblyDescription("Wi-Fi Auto-Login utility for Central University of Rajasthan")]
+[assembly: AssemblyConfiguration("")]
+[assembly: AssemblyCompany("Nitin Yadav")]
+[assembly: AssemblyProduct("CURAJ Campus Connect")]
+[assembly: AssemblyCopyright("Copyright © 2026 Nitin Yadav")]
+[assembly: AssemblyTrademark("")]
+[assembly: AssemblyCulture("")]
+[assembly: ComVisible(false)]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
 
 namespace CurajConnect
 {

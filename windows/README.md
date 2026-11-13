@@ -19,7 +19,7 @@ No Visual Studio or heavy SDK required! Windows includes the Microsoft C# compil
 
 Run in PowerShell:
 ```powershell
-& "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32manifest:app.manifest /out:campus-connect.exe campus-connect.cs
+& "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32manifest:app.manifest /win32icon:app.ico /out:campus-connect.exe campus-connect.cs
 ```
 
 ---

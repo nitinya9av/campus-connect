@@ -26,7 +26,7 @@ jobs:
 
       - name: Compile Native C# Client
         run: |
-          & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32manifest:windows\app.manifest /out:windows\campus-connect.exe windows\campus-connect.cs
+          & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32manifest:windows\app.manifest /win32icon:windows\app.ico /out:windows\campus-connect.exe windows\campus-connect.cs
 
       - name: Build and Package MSIX
         run: |
